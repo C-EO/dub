@@ -4,40 +4,34 @@ import {
   validateDomain,
 } from "@/lib/api/domains";
 import { exceededLimitError } from "@/lib/api/errors";
-import { withAuth } from "@/lib/auth";
+import { parseRequestBody } from "@/lib/api/utils";
+import { withWorkspace } from "@/lib/auth";
 import prisma from "@/lib/prisma";
+import z from "@/lib/zod";
+import { DomainSchema, addDomainBodySchema } from "@/lib/zod/schemas";
 import { NextResponse } from "next/server";
 
 // GET /api/domains – get all domains for a workspace
-export const GET = withAuth(async ({ workspace }) => {
+export const GET = withWorkspace(async ({ workspace }) => {
   const domains = await prisma.domain.findMany({
     where: {
       projectId: workspace.id,
     },
-    select: {
-      slug: true,
-      verified: true,
-      primary: true,
-      archived: true,
-      target: true,
-      type: true,
-      placeholder: true,
-      clicks: true,
-      expiredUrl: true,
-    },
   });
-  return NextResponse.json(domains);
+
+  return NextResponse.json(z.array(DomainSchema).parse(domains));
 });
 
 // POST /api/domains - add a domain
-export const POST = withAuth(async ({ req, workspace }) => {
+export const POST = withWorkspace(async ({ req, workspace }) => {
+  const body = await parseRequestBody(req);
   const {
     slug: domain,
     target,
     type,
     expiredUrl,
     placeholder,
-  } = await req.json();
+  } = addDomainBodySchema.parse(body);
 
   if (workspace.domains.length >= workspace.domainsLimit) {
     return new Response(
@@ -75,7 +69,7 @@ export const POST = withAuth(async ({ req, workspace }) => {
       type,
       projectId: workspace.id,
       primary: workspace.domains.length === 0,
-      placeholder,
+      ...(placeholder && { placeholder }),
       ...(workspace.plan !== "free" && {
         target,
         expiredUrl,
@@ -88,10 +82,10 @@ export const POST = withAuth(async ({ req, workspace }) => {
     domain,
     projectId: workspace.id,
     ...(workspace.plan !== "free" && {
-      url: target,
+      url: target || undefined,
     }),
     rewrite: type === "rewrite",
   });
 
-  return NextResponse.json(response);
+  return NextResponse.json(DomainSchema.parse(response), { status: 201 });
 });
