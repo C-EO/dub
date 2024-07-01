@@ -36,6 +36,7 @@ const BUSINESS_PLAN_MODIFIER = ({
     tags,
     users,
     ai: 1000,
+    api: 6000,
   },
   colors: {
     bg: "bg-sky-900",
@@ -101,6 +102,7 @@ export const PLANS = [
       tags: 5,
       users: 1,
       ai: 10,
+      api: 600,
     },
     colors: {
       bg: "bg-black",
@@ -158,6 +160,7 @@ export const PLANS = [
       tags: 25,
       users: 5,
       ai: 1000,
+      api: 3000,
     },
     colors: {
       bg: "bg-blue-500",
@@ -281,9 +284,13 @@ export const PLANS = [
       yearly: null,
     },
     limits: {
-      links: null,
-      clicks: null,
-      domains: null,
+      links: 250000,
+      clicks: 5000000,
+      domains: 1000,
+      tags: 1000,
+      users: 500,
+      ai: 10000,
+      api: 10000,
     },
     colors: {
       bg: "bg-violet-600",
@@ -339,7 +346,14 @@ export const getPlanDetails = (plan: string) => {
   )!;
 };
 
-export const getNextPlan = (plan: string) => {
+export const getCurrentPlan = (plan: string) => {
+  return (
+    PLANS.find((p) => p.name.toLowerCase() === plan.toLowerCase()) || FREE_PLAN
+  );
+};
+
+export const getNextPlan = (plan?: string | null) => {
+  if (!plan) return PRO_PLAN;
   return PLANS[
     PLANS.findIndex((p) => p.name.toLowerCase() === plan.toLowerCase()) + 1
   ];

@@ -1,18 +1,15 @@
-import {
-  ApiMiddleware,
-  AppMiddleware,
-  LinkMiddleware,
-  RootMiddleware,
-} from "@/lib/middleware";
+import { ApiMiddleware, AppMiddleware, LinkMiddleware } from "@/lib/middleware";
 import { parse } from "@/lib/middleware/utils";
 import {
   ADMIN_HOSTNAMES,
   API_HOSTNAMES,
   APP_HOSTNAMES,
   DEFAULT_REDIRECTS,
+  isValidUrl,
 } from "@dub/utils";
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
 import AdminMiddleware from "./lib/middleware/admin";
+import CreateLinkMiddleware from "./lib/middleware/create-link";
 
 export const config = {
   matcher: [
@@ -30,7 +27,7 @@ export const config = {
 };
 
 export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
-  const { domain, path, key } = parse(req);
+  const { domain, path, key, fullKey } = parse(req);
 
   // for App
   if (APP_HOSTNAMES.has(domain)) {
@@ -57,9 +54,8 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
     return AdminMiddleware(req);
   }
 
-  // for root pages (e.g. dub.sh, chatg.pt, etc.)
-  if (key.length === 0) {
-    return RootMiddleware(req, ev);
+  if (isValidUrl(fullKey)) {
+    return CreateLinkMiddleware(req);
   }
 
   return LinkMiddleware(req, ev);

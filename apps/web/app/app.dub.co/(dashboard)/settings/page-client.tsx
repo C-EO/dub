@@ -1,7 +1,9 @@
 "use client";
 
 import DeleteAccountSection from "@/ui/account/delete-account";
+import UpdateDefaultWorkspace from "@/ui/account/update-default-workspace";
 import UploadAvatar from "@/ui/account/upload-avatar";
+import UserId from "@/ui/account/user-id";
 import { Form } from "@dub/ui";
 import { APP_NAME } from "@dub/utils";
 import { useSession } from "next-auth/react";
@@ -25,7 +27,7 @@ export default function SettingsPageClient() {
         helpText="Max 32 characters."
         handleSubmit={(data) =>
           fetch("/api/user", {
-            method: "PUT",
+            method: "PATCH",
             headers: {
               "Content-Type": "application/json",
             },
@@ -54,7 +56,7 @@ export default function SettingsPageClient() {
         // helpText={<UpdateSubscription />} TODO: enable this once we can subscribe folks programmatically
         handleSubmit={(data) =>
           fetch("/api/user", {
-            method: "PUT",
+            method: "PATCH",
             headers: {
               "Content-Type": "application/json",
             },
@@ -71,6 +73,8 @@ export default function SettingsPageClient() {
         }
       />
       <UploadAvatar />
+      <UserId />
+      <UpdateDefaultWorkspace />
       <DeleteAccountSection />
     </>
   );

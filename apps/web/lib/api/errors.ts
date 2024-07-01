@@ -83,7 +83,7 @@ export class DubApiError extends Error {
   }) {
     super(message);
     this.code = code;
-    this.docUrl = docUrl ?? `${docErrorUrl}#${code}`;
+    this.docUrl = docUrl ?? `${docErrorUrl}#${code.replace("_", "-")}`;
   }
 }
 
@@ -112,13 +112,13 @@ export function fromZodError(error: ZodError): ErrorResponse {
           label: "",
         },
       }),
-      doc_url: `${docErrorUrl}#unprocessable_entity`,
+      doc_url: `${docErrorUrl}#unprocessable-entity`,
     },
   };
 }
 
 export function handleApiError(error: any): ErrorResponse & { status: number } {
-  console.error("API error occurred", error);
+  console.error("API error occurred", error.message);
 
   // Zod errors
   if (error instanceof ZodError) {
@@ -140,6 +140,18 @@ export function handleApiError(error: any): ErrorResponse & { status: number } {
     };
   }
 
+  // Prisma record not found error
+  if (error.code === "P2025") {
+    return {
+      error: {
+        code: "not_found",
+        message: `${error.meta.cause} Please check the provided identifier.`,
+        doc_url: `${docErrorUrl}#not-found`,
+      },
+      status: 404,
+    };
+  }
+
   // Fallback
   // Unhandled errors are not user-facing, so we don't expose the actual error
   return {
@@ -147,7 +159,7 @@ export function handleApiError(error: any): ErrorResponse & { status: number } {
       code: "internal_server_error",
       message:
         "An internal server error occurred. Please contact our support if the problem persists.",
-      doc_url: `${docErrorUrl}#internal_server_error`,
+      doc_url: `${docErrorUrl}#internal-server-error`,
     },
     status: 500,
   };
@@ -193,7 +205,7 @@ export const errorSchemaFactory = (
                   type: "string",
                   description:
                     "A link to our documentation with more details about this error code",
-                  example: `${docErrorUrl}#${code}`,
+                  example: `${docErrorUrl}#${code.replace("_", "-")}`,
                 },
               },
               required: ["code", "message"],
@@ -213,10 +225,10 @@ export const exceededLimitError = ({
 }: {
   plan: PlanProps;
   limit: number;
-  type: "clicks" | "links" | "domains" | "tags" | "users";
+  type: "clicks" | "links" | "AI" | "domains" | "tags" | "users";
 }) => {
   return `You've reached your ${
-    type === "links" ? "monthly" : ""
+    type === "links" || type === "AI" ? "monthly" : ""
   } limit of ${limit} ${
     limit === 1 ? type.slice(0, -1) : type
   } on the ${capitalize(plan)} plan. Please upgrade to add more ${type}.`;

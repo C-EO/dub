@@ -1,6 +1,6 @@
 import { bulkCreateLinks, processLink } from "@/lib/api/links";
 import { qstash } from "@/lib/cron";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { NewLinkProps, ProcessedLinkProps, WorkspaceProps } from "@/lib/types";
 import { redis } from "@/lib/upstash";
 import { APP_DOMAIN_WITH_NGROK } from "@dub/utils";
@@ -27,6 +27,9 @@ export const importLinksFromCSV = async ({
     where: {
       id: workspaceId,
     },
+    include: {
+      domains: true,
+    },
   })) as unknown as WorkspaceProps;
 
   const processedLinks = await Promise.all(
@@ -39,15 +42,31 @@ export const importLinksFromCSV = async ({
     .filter(({ error }) => error == null)
     .map(({ link }) => link) as ProcessedLinkProps[];
 
-  const importedLinks = await bulkCreateLinks({
-    links: validLinks,
+  const alreadyCreatedLinks = await prisma.link.findMany({
+    where: {
+      domain,
+      key: {
+        in: validLinks.map((link) => link.key),
+      },
+    },
+    select: {
+      key: true,
+    },
   });
 
-  count += importedLinks.length;
+  const importedLinks = await bulkCreateLinks({
+    links: validLinks.filter(
+      (link) => !alreadyCreatedLinks.some((l) => l.key === link.key),
+    ),
+  });
+
+  count += links.length;
 
   console.log({
-    importedLinksLength: importedLinks.length,
     count,
+    totalCount,
+    importedLinks: importedLinks.length,
+    remainder: totalCount - count,
   });
 
   // wait 500 ms before making another request

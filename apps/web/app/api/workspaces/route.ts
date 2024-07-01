@@ -1,19 +1,18 @@
-import {
-  addDomainToVercel,
-  domainExists,
-  setRootDomain,
-} from "@/lib/api/domains";
 import { DubApiError } from "@/lib/api/errors";
 import { withSession } from "@/lib/auth";
 import { checkIfUserExists } from "@/lib/planetscale";
-import prisma from "@/lib/prisma";
-import { WorkspaceSchema, createWorkspaceSchema } from "@/lib/zod/schemas";
+import { prisma } from "@/lib/prisma";
+import {
+  WorkspaceSchema,
+  createWorkspaceSchema,
+} from "@/lib/zod/schemas/workspaces";
 import { FREE_WORKSPACES_LIMIT, nanoid } from "@dub/utils";
+import { waitUntil } from "@vercel/functions";
 import { NextResponse } from "next/server";
 
 // GET /api/workspaces - get all projects for the current user
 export const GET = withSession(async ({ session }) => {
-  const projects = await prisma.project.findMany({
+  const workspaces = await prisma.project.findMany({
     where: {
       users: {
         some: {
@@ -39,14 +38,14 @@ export const GET = withSession(async ({ session }) => {
     },
   });
   return NextResponse.json(
-    projects.map((project) =>
+    workspaces.map((project) =>
       WorkspaceSchema.parse({ ...project, id: `ws_${project.id}` }),
     ),
   );
 });
 
 export const POST = withSession(async ({ req, session }) => {
-  const { name, slug, domain } = await createWorkspaceSchema.parseAsync(
+  const { name, slug } = await createWorkspaceSchema.parseAsync(
     await req.json(),
   );
 
@@ -78,17 +77,14 @@ export const POST = withSession(async ({ req, session }) => {
     });
   }
 
-  const [slugExist, domainExist] = await Promise.all([
-    prisma.project.findUnique({
-      where: {
-        slug,
-      },
-      select: {
-        slug: true,
-      },
-    }),
-    domain ? domainExists(domain) : false,
-  ]);
+  const slugExist = await prisma.project.findUnique({
+    where: {
+      slug,
+    },
+    select: {
+      slug: true,
+    },
+  });
 
   if (slugExist) {
     throw new DubApiError({
@@ -97,74 +93,59 @@ export const POST = withSession(async ({ req, session }) => {
     });
   }
 
-  if (domainExist) {
-    throw new DubApiError({
-      code: "conflict",
-      message: "Domain is already in use.",
-    });
-  }
-
-  const [projectResponse, domainRepsonse] = await Promise.all([
-    prisma.project.create({
-      data: {
-        name,
-        slug,
-        users: {
-          create: {
-            userId: session.user.id,
-            role: "owner",
-          },
-        },
-        ...(domain && {
-          domains: {
-            create: {
-              slug: domain,
-              primary: true,
-            },
-          },
-        }),
-        billingCycleStart: new Date().getDate(),
-        inviteCode: nanoid(24),
-        defaultDomains: {
-          create: {}, // by default, we give users all the default domains when they create a project
-        },
-      },
-      include: {
-        domains: {
-          select: {
-            id: true,
-            slug: true,
-            primary: true,
-          },
-        },
-        users: {
-          select: {
-            role: true,
-          },
-        },
-      },
-    }),
-    domain && addDomainToVercel(domain),
-  ]);
-
-  // if domain is specified and it was successfully added to Vercel
-  // update it in Redis cache
-  if (domain && domainRepsonse && !domainRepsonse.error) {
-    await setRootDomain({
-      id: projectResponse.domains[0].id,
-      domain,
-      projectId: projectResponse.id,
-    });
-  }
-
-  const response = {
-    ...projectResponse,
-    id: `ws_${projectResponse.id}`,
-    domains: projectResponse.domains.map(({ slug, primary }) => ({
+  const workspaceResponse = await prisma.project.create({
+    data: {
+      name,
       slug,
-      primary,
-    })),
-  };
+      users: {
+        create: {
+          userId: session.user.id,
+          role: "owner",
+        },
+      },
+      billingCycleStart: new Date().getDate(),
+      inviteCode: nanoid(24),
+      defaultDomains: {
+        create: {}, // by default, we give users all the default domains when they create a project
+      },
+    },
+    include: {
+      users: {
+        where: {
+          userId: session.user.id,
+        },
+        select: {
+          role: true,
+        },
+      },
+      domains: {
+        select: {
+          slug: true,
+          primary: true,
+        },
+      },
+    },
+  });
 
-  return NextResponse.json(response);
+  waitUntil(
+    (async () => {
+      if (session.user["defaultWorkspace"] === null) {
+        await prisma.user.update({
+          where: {
+            id: session.user.id,
+          },
+          data: {
+            defaultWorkspace: workspaceResponse.slug,
+          },
+        });
+      }
+    })(),
+  );
+
+  return NextResponse.json(
+    WorkspaceSchema.parse({
+      ...workspaceResponse,
+      id: `ws_${workspaceResponse.id}`,
+    }),
+  );
 });

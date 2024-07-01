@@ -35,7 +35,7 @@ export const APP_DOMAIN_WITH_NGROK =
     ? `https://app.${process.env.NEXT_PUBLIC_APP_DOMAIN}`
     : process.env.NEXT_PUBLIC_VERCEL_ENV === "preview"
       ? `https://preview.${process.env.NEXT_PUBLIC_APP_DOMAIN}`
-      : process.env.NGROK_URL || "http://localhost:8888";
+      : process.env.NEXT_PUBLIC_NGROK_URL || "http://localhost:8888";
 
 export const API_HOSTNAMES = new Set([
   `api.${process.env.NEXT_PUBLIC_APP_DOMAIN}`,
@@ -57,6 +57,7 @@ export const ADMIN_HOSTNAMES = new Set([
 ]);
 
 export const DUB_LOGO = "https://assets.dub.co/logo.png";
+export const DUB_WORDMARK = "https://assets.dub.co/wordmark.png";
 export const DUB_THUMBNAIL = "https://assets.dub.co/thumbnail.jpg";
 
 export const DUB_WORKSPACE_ID = "cl7pj5kq4006835rbjlt2ofka";
@@ -91,7 +92,7 @@ export const DUB_DOMAINS = [
           type: "redirect",
           placeholder: "https://chat.openai.com/g/g-UGjKKONEe-domainsgpt",
           clicks: 0,
-          allowedHostnames: ["chat.openai.com"],
+          allowedHostnames: ["chat.openai.com", "chatgpt.com"],
           projectId: DUB_WORKSPACE_ID,
         },
         {
@@ -164,6 +165,11 @@ export const DUB_DOMAINS_ARRAY = DUB_DOMAINS.map((domain) => domain.slug);
 export const DUB_DEMO_LINKS = [
   {
     id: "clqo10sum0006js08vutzfxt3",
+    domain: "d.to",
+    key: "try",
+  },
+  {
+    id: "cltshzzpd0005126z3rd2lvo4",
     domain: "dub.sh",
     key: "try",
   },

@@ -1,17 +1,8 @@
 import z from "@/lib/zod";
-import {
-  COUNTRY_CODES,
-  getUrlFromString,
-  isValidUrl,
-  validDomainRegex,
-} from "@dub/utils";
+import { COUNTRY_CODES, validDomainRegex } from "@dub/utils";
 import { booleanQuerySchema } from "./misc";
 import { TagSchema } from "./tags";
-
-export const parseUrlSchema = z
-  .string()
-  .transform((v) => getUrlFromString(v))
-  .refine((v) => isValidUrl(v), { message: "Invalid URL" });
+import { parseUrlSchema, parseUrlSchemaAllowEmpty } from "./utils";
 
 export const getUrlQuerySchema = z.object({
   url: parseUrlSchema,
@@ -82,6 +73,8 @@ export const getLinksQuerySchema = LinksQuerySchema.merge(
       ),
     page: z.coerce
       .number()
+      .int()
+      .nonnegative()
       .optional()
       .describe(
         "The page number for pagination (each page contains 100 links).",
@@ -117,7 +110,7 @@ export const domainKeySchema = z.object({
 });
 
 export const createLinkBodySchema = z.object({
-  url: parseUrlSchema
+  url: parseUrlSchemaAllowEmpty
     .describe("The destination URL of the short link.")
     .openapi({
       example: "https://google/com",
@@ -138,6 +131,8 @@ export const createLinkBodySchema = z.object({
     .string()
     .min(1)
     .max(255)
+    // remove `ext_` prefix if user passes it
+    .transform((v) => (v?.startsWith("ext_") ? v.slice(4) : v))
     .nullish()
     .describe(
       "This is the ID of the link in your database. If set, it can be used to identify the link in the future. Must be prefixed with `ext_` when passed as a query parameter.",
@@ -149,6 +144,11 @@ export const createLinkBodySchema = z.object({
     .describe(
       "The prefix of the short link slug for randomly-generated keys (e.g. if prefix is `/c/`, generated keys will be in the `/c/:key` format). Will be ignored if `key` is provided.",
     ),
+  trackConversion: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe("Whether to track conversions for the short link."),
   archived: z
     .boolean()
     .optional()
@@ -236,6 +236,14 @@ export const createLinkBodySchema = z.object({
     .nullish()
     .describe(
       "Geo targeting information for the short link in JSON format `{[COUNTRY]: https://example.com }`.",
+    )
+    .openapi({ ref: "linkGeoTargeting" }),
+  doIndex: z
+    .boolean()
+    .optional()
+    .default(false)
+    .describe(
+      "Allow search engines to index your short link. Defaults to `false` if not provided. Learn more: https://d.to/noindex",
     ),
 });
 
@@ -266,6 +274,10 @@ export const LinkSchema = z
         "This is the ID of the link in your database. If set, it can be used to identify the link in the future. Must be prefixed with 'ext_' when passed as a query parameter.",
       ),
     url: z.string().url().describe("The destination URL of the short link."),
+    trackConversion: z
+      .boolean()
+      .default(false)
+      .describe("[BETA] Whether to track conversions for the short link."),
     archived: z
       .boolean()
       .default(false)
@@ -315,6 +327,10 @@ export const LinkSchema = z
       .boolean()
       .default(false)
       .describe("Whether the short link uses link cloaking."),
+    doIndex: z
+      .boolean()
+      .default(false)
+      .describe("Whether to allow search engines to index the short link."),
     ios: z
       .string()
       .nullable()
@@ -392,6 +408,14 @@ export const LinkSchema = z
       .string()
       .nullable()
       .describe("The date and time when the short link was last clicked."),
+    leads: z
+      .number()
+      .default(0)
+      .describe("[BETA]: The number of leads the short links has generated."),
+    sales: z
+      .number()
+      .default(0)
+      .describe("[BETA]: The number of sales the short links has generated."),
     createdAt: z
       .string()
       .describe("The date and time when the short link was created."),
@@ -418,7 +442,7 @@ export const getLinkInfoQuerySchema = domainKeySchema.partial().merge(
       .string()
       .optional()
       .describe(
-        "This is the ID of the link in the your database. Must be prefixed with `ext_`. when provided.",
+        "This is the ID of the link in the your database. Must be prefixed with `ext_` when passed as a query parameter.",
       )
       .openapi({ example: "ext_123456" }),
   }),

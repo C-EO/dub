@@ -50,9 +50,7 @@
         "x-speakeasy-usage-example": true,
         "summary": "Create a new link",
         "description": "Create a new link for the authenticated workspace.",
-        "tags": [
-          "Links"
-        ],
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -87,6 +85,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The destination URL of the short link.",
+                    "example": "https://google/com"
+                  },
                   "domain": {
                     "type": "string",
                     "description": "The domain of the short link. If not provided, the primary domain for the workspace will be used (or `dub.sh` if the workspace has no domains)."
@@ -95,14 +98,17 @@
                     "type": "string",
                     "description": "The short link slug. If not provided, a random 7-character slug will be generated."
                   },
+                  "externalId": {
+                    "type": "string",
+                    "nullable": true,
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "This is the ID of the link in your database. If set, it can be used to identify the link in the future. Must be prefixed with `ext_` when passed as a query parameter.",
+                    "example": "123456"
+                  },
                   "prefix": {
                     "type": "string",
                     "description": "The prefix of the short link slug for randomly-generated keys (e.g. if prefix is `/c/`, generated keys will be in the `/c/:key` format). Will be ignored if `key` is provided."
-                  },
-                  "url": {
-                    "type": "string",
-                    "description": "The destination URL of the short link.",
-                    "example": "https://google/com"
                   },
                   "archived": {
                     "type": "boolean",
@@ -133,9 +139,7 @@
                       }
                     ],
                     "description": "The unique IDs of the tags assigned to the short link.",
-                    "example": [
-                      "clux0rgak00011..."
-                    ]
+                    "example": ["clux0rgak00011..."]
                   },
                   "tagNames": {
                     "anyOf": [
@@ -965,9 +969,7 @@
                     "description": "Geo targeting information for the short link in JSON format `{[COUNTRY]: https://example.com }`."
                   }
                 },
-                "required": [
-                  "url"
-                ]
+                "required": ["url"]
               }
             }
           }
@@ -1017,9 +1019,7 @@
         "x-speakeasy-name-override": "list",
         "summary": "Retrieve a list of links",
         "description": "Retrieve a list of links for the authenticated workspace. The list will be paginated and the provided query parameters allow filtering the returned links.",
-        "tags": [
-          "Links"
-        ],
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -1148,11 +1148,7 @@
             "description": "The field to sort the links by. The default is `createdAt`, and sort order is always descending.",
             "schema": {
               "type": "string",
-              "enum": [
-                "createdAt",
-                "clicks",
-                "lastClicked"
-              ],
+              "enum": ["createdAt", "clicks", "lastClicked"],
               "default": "createdAt",
               "description": "The field to sort the links by. The default is `createdAt`, and sort order is always descending."
             }
@@ -1217,9 +1213,7 @@
         "x-speakeasy-name-override": "count",
         "summary": "Retrieve the number of links",
         "description": "Retrieve the number of links for the authenticated workspace. The provided query parameters allow filtering the returned links.",
-        "tags": [
-          "Links"
-        ],
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -1350,15 +1344,11 @@
               "anyOf": [
                 {
                   "type": "string",
-                  "enum": [
-                    "domain"
-                  ]
+                  "enum": ["domain"]
                 },
                 {
                   "type": "string",
-                  "enum": [
-                    "tagId"
-                  ]
+                  "enum": ["tagId"]
                 }
               ],
               "description": "The field to group the links by."
@@ -1412,10 +1402,8 @@
         "operationId": "getLinkInfo",
         "x-speakeasy-name-override": "get",
         "summary": "Retrieve a link",
-        "description": "Retrieve the info for a link from their domain and key.",
-        "tags": [
-          "Links"
-        ],
+        "description": "Retrieve the info for a link.",
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -1450,8 +1438,7 @@
               "type": "string",
               "minLength": 1,
               "description": "The domain of the link to retrieve. E.g. for `d.to/github`, the domain is `d.to`."
-            },
-            "required": true
+            }
           },
           {
             "in": "query",
@@ -1461,8 +1448,27 @@
               "type": "string",
               "minLength": 1,
               "description": "The key of the link to retrieve. E.g. for `d.to/github`, the key is `github`."
-            },
-            "required": true
+            }
+          },
+          {
+            "in": "query",
+            "name": "linkId",
+            "description": "The unique ID of the short link.",
+            "schema": {
+              "type": "string",
+              "description": "The unique ID of the short link.",
+              "example": "clux0rgak00011..."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with `ext_` when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with `ext_` when passed as a query parameter.",
+              "example": "ext_123456"
+            }
           }
         ],
         "responses": {
@@ -1507,15 +1513,13 @@
       }
     },
     "/links/{linkId}": {
-      "put": {
-        "operationId": "editLink",
+      "patch": {
+        "operationId": "updateLink",
         "x-speakeasy-name-override": "update",
         "x-speakeasy-max-method-params": 2,
-        "summary": "Edit a link",
-        "description": "Edit a link for the authenticated workspace.",
-        "tags": [
-          "Links"
-        ],
+        "summary": "Update a link",
+        "description": "Update a link for the authenticated workspace.",
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -1525,10 +1529,10 @@
           {
             "in": "path",
             "name": "linkId",
-            "description": "The id of the link to edit. You can get this via the `getLinkInfo` endpoint.",
+            "description": "The id of the link to update. You may use either `linkId` (obtained via `/links/info` endpoint) or `externalId` prefixed with `ext_`.",
             "schema": {
               "type": "string",
-              "description": "The id of the link to edit. You can get this via the `getLinkInfo` endpoint."
+              "description": "The id of the link to update. You may use either `linkId` (obtained via `/links/info` endpoint) or `externalId` prefixed with `ext_`."
             },
             "required": true
           },
@@ -1560,6 +1564,11 @@
               "schema": {
                 "type": "object",
                 "properties": {
+                  "url": {
+                    "type": "string",
+                    "description": "The destination URL of the short link.",
+                    "example": "https://google/com"
+                  },
                   "domain": {
                     "type": "string",
                     "description": "The domain of the short link. If not provided, the primary domain for the workspace will be used (or `dub.sh` if the workspace has no domains)."
@@ -1568,14 +1577,17 @@
                     "type": "string",
                     "description": "The short link slug. If not provided, a random 7-character slug will be generated."
                   },
+                  "externalId": {
+                    "type": "string",
+                    "nullable": true,
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "description": "This is the ID of the link in your database. If set, it can be used to identify the link in the future. Must be prefixed with `ext_` when passed as a query parameter.",
+                    "example": "123456"
+                  },
                   "prefix": {
                     "type": "string",
                     "description": "The prefix of the short link slug for randomly-generated keys (e.g. if prefix is `/c/`, generated keys will be in the `/c/:key` format). Will be ignored if `key` is provided."
-                  },
-                  "url": {
-                    "type": "string",
-                    "description": "The destination URL of the short link.",
-                    "example": "https://google/com"
                   },
                   "archived": {
                     "type": "boolean",
@@ -1606,9 +1618,7 @@
                       }
                     ],
                     "description": "The unique IDs of the tags assigned to the short link.",
-                    "example": [
-                      "clux0rgak00011..."
-                    ]
+                    "example": ["clux0rgak00011..."]
                   },
                   "tagNames": {
                     "anyOf": [
@@ -2438,16 +2448,14 @@
                     "description": "Geo targeting information for the short link in JSON format `{[COUNTRY]: https://example.com }`."
                   }
                 },
-                "required": [
-                  "url"
-                ]
+                "required": ["url"]
               }
             }
           }
         },
         "responses": {
           "200": {
-            "description": "The edited link",
+            "description": "The updated link",
             "content": {
               "application/json": {
                 "schema": {
@@ -2491,9 +2499,7 @@
         "x-speakeasy-max-method-params": 1,
         "summary": "Delete a link",
         "description": "Delete a link for the authenticated workspace.",
-        "tags": [
-          "Links"
-        ],
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -2503,10 +2509,10 @@
           {
             "in": "path",
             "name": "linkId",
-            "description": "The id of the link to delete. You can get this via the `getLinkInfo` endpoint.",
+            "description": "The id of the link to delete. You may use either `linkId` (obtained via `/links/info` endpoint) or `externalId` prefixed with `ext_`.",
             "schema": {
               "type": "string",
-              "description": "The id of the link to delete. You can get this via the `getLinkInfo` endpoint."
+              "description": "The id of the link to delete. You may use either `linkId` (obtained via `/links/info` endpoint) or `externalId` prefixed with `ext_`."
             },
             "required": true
           },
@@ -2545,9 +2551,7 @@
                       "description": "The ID of the link."
                     }
                   },
-                  "required": [
-                    "id"
-                  ]
+                  "required": ["id"]
                 }
               }
             }
@@ -2588,9 +2592,7 @@
         "x-speakeasy-name-override": "createMany",
         "summary": "Bulk create links",
         "description": "Bulk create up to 100 links for the authenticated workspace.",
-        "tags": [
-          "Links"
-        ],
+        "tags": ["Links"],
         "security": [
           {
             "token": []
@@ -2627,6 +2629,11 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "url": {
+                      "type": "string",
+                      "description": "The destination URL of the short link.",
+                      "example": "https://google/com"
+                    },
                     "domain": {
                       "type": "string",
                       "description": "The domain of the short link. If not provided, the primary domain for the workspace will be used (or `dub.sh` if the workspace has no domains)."
@@ -2635,14 +2642,17 @@
                       "type": "string",
                       "description": "The short link slug. If not provided, a random 7-character slug will be generated."
                     },
+                    "externalId": {
+                      "type": "string",
+                      "nullable": true,
+                      "minLength": 1,
+                      "maxLength": 255,
+                      "description": "This is the ID of the link in your database. If set, it can be used to identify the link in the future. Must be prefixed with `ext_` when passed as a query parameter.",
+                      "example": "123456"
+                    },
                     "prefix": {
                       "type": "string",
                       "description": "The prefix of the short link slug for randomly-generated keys (e.g. if prefix is `/c/`, generated keys will be in the `/c/:key` format). Will be ignored if `key` is provided."
-                    },
-                    "url": {
-                      "type": "string",
-                      "description": "The destination URL of the short link.",
-                      "example": "https://google/com"
                     },
                     "archived": {
                       "type": "boolean",
@@ -2673,9 +2683,7 @@
                         }
                       ],
                       "description": "The unique IDs of the tags assigned to the short link.",
-                      "example": [
-                        "clux0rgak00011..."
-                      ]
+                      "example": ["clux0rgak00011..."]
                     },
                     "tagNames": {
                       "anyOf": [
@@ -3505,9 +3513,7 @@
                       "description": "Geo targeting information for the short link in JSON format `{[COUNTRY]: https://example.com }`."
                     }
                   },
-                  "required": [
-                    "url"
-                  ]
+                  "required": ["url"]
                 }
               }
             }
@@ -3563,9 +3569,7 @@
         "x-speakeasy-name-override": "get",
         "summary": "Retrieve a QR code",
         "description": "Retrieve a QR code for a link.",
-        "tags": [
-          "QR Codes"
-        ],
+        "tags": ["QR Codes"],
         "security": [
           {
             "token": []
@@ -3599,12 +3603,7 @@
             "description": "The level of error correction to use for the QR code. Defaults to `L` if not provided.",
             "schema": {
               "type": "string",
-              "enum": [
-                "L",
-                "M",
-                "Q",
-                "H"
-              ],
+              "enum": ["L", "M", "Q", "H"],
               "default": "L",
               "description": "The level of error correction to use for the QR code. Defaults to `L` if not provided."
             }
@@ -3687,9 +3686,7 @@
         "x-speakeasy-name-override": "clicks",
         "summary": "Retrieve clicks analytics",
         "description": "Retrieve the number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -3719,11 +3716,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -3737,19 +3754,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -4101,8 +4147,673 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "number",
-                  "description": "The number of clicks matching the specified queries."
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "description": "The total number of clicks"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "start": {
+                            "type": "string",
+                            "description": "The starting timestamp of the interval"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks in the interval"
+                          }
+                        },
+                        "required": ["start", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "country": {
+                            "type": "string",
+                            "enum": [
+                              "AF",
+                              "AL",
+                              "DZ",
+                              "AS",
+                              "AD",
+                              "AO",
+                              "AI",
+                              "AQ",
+                              "AG",
+                              "AR",
+                              "AM",
+                              "AW",
+                              "AU",
+                              "AT",
+                              "AZ",
+                              "BS",
+                              "BH",
+                              "BD",
+                              "BB",
+                              "BY",
+                              "BE",
+                              "BZ",
+                              "BJ",
+                              "BM",
+                              "BT",
+                              "BO",
+                              "BA",
+                              "BW",
+                              "BV",
+                              "BR",
+                              "IO",
+                              "BN",
+                              "BG",
+                              "BF",
+                              "BI",
+                              "KH",
+                              "CM",
+                              "CA",
+                              "CV",
+                              "KY",
+                              "CF",
+                              "TD",
+                              "CL",
+                              "CN",
+                              "CX",
+                              "CC",
+                              "CO",
+                              "KM",
+                              "CG",
+                              "CD",
+                              "CK",
+                              "CR",
+                              "CI",
+                              "HR",
+                              "CU",
+                              "CY",
+                              "CZ",
+                              "DK",
+                              "DJ",
+                              "DM",
+                              "DO",
+                              "EC",
+                              "EG",
+                              "SV",
+                              "GQ",
+                              "ER",
+                              "EE",
+                              "ET",
+                              "FK",
+                              "FO",
+                              "FJ",
+                              "FI",
+                              "FR",
+                              "GF",
+                              "PF",
+                              "TF",
+                              "GA",
+                              "GM",
+                              "GE",
+                              "DE",
+                              "GH",
+                              "GI",
+                              "GR",
+                              "GL",
+                              "GD",
+                              "GP",
+                              "GU",
+                              "GT",
+                              "GN",
+                              "GW",
+                              "GY",
+                              "HT",
+                              "HM",
+                              "VA",
+                              "HN",
+                              "HK",
+                              "HU",
+                              "IS",
+                              "IN",
+                              "ID",
+                              "IR",
+                              "IQ",
+                              "IE",
+                              "IL",
+                              "IT",
+                              "JM",
+                              "JP",
+                              "JO",
+                              "KZ",
+                              "KE",
+                              "KI",
+                              "KP",
+                              "KR",
+                              "KW",
+                              "KG",
+                              "LA",
+                              "LV",
+                              "LB",
+                              "LS",
+                              "LR",
+                              "LY",
+                              "LI",
+                              "LT",
+                              "LU",
+                              "MO",
+                              "MG",
+                              "MW",
+                              "MY",
+                              "MV",
+                              "ML",
+                              "MT",
+                              "MH",
+                              "MQ",
+                              "MR",
+                              "MU",
+                              "YT",
+                              "MX",
+                              "FM",
+                              "MD",
+                              "MC",
+                              "MN",
+                              "MS",
+                              "MA",
+                              "MZ",
+                              "MM",
+                              "NA",
+                              "NR",
+                              "NP",
+                              "NL",
+                              "NC",
+                              "NZ",
+                              "NI",
+                              "NE",
+                              "NG",
+                              "NU",
+                              "NF",
+                              "MK",
+                              "MP",
+                              "NO",
+                              "OM",
+                              "PK",
+                              "PW",
+                              "PS",
+                              "PA",
+                              "PG",
+                              "PY",
+                              "PE",
+                              "PH",
+                              "PN",
+                              "PL",
+                              "PT",
+                              "PR",
+                              "QA",
+                              "RE",
+                              "RO",
+                              "RU",
+                              "RW",
+                              "SH",
+                              "KN",
+                              "LC",
+                              "PM",
+                              "VC",
+                              "WS",
+                              "SM",
+                              "ST",
+                              "SA",
+                              "SN",
+                              "SC",
+                              "SL",
+                              "SG",
+                              "SK",
+                              "SI",
+                              "SB",
+                              "SO",
+                              "ZA",
+                              "GS",
+                              "ES",
+                              "LK",
+                              "SD",
+                              "SR",
+                              "SJ",
+                              "SZ",
+                              "SE",
+                              "CH",
+                              "SY",
+                              "TW",
+                              "TJ",
+                              "TZ",
+                              "TH",
+                              "TL",
+                              "TG",
+                              "TK",
+                              "TO",
+                              "TT",
+                              "TN",
+                              "TR",
+                              "TM",
+                              "TC",
+                              "TV",
+                              "UG",
+                              "UA",
+                              "AE",
+                              "GB",
+                              "US",
+                              "UM",
+                              "UY",
+                              "UZ",
+                              "VU",
+                              "VE",
+                              "VN",
+                              "VG",
+                              "VI",
+                              "WF",
+                              "EH",
+                              "YE",
+                              "ZM",
+                              "ZW",
+                              "AX",
+                              "BQ",
+                              "CW",
+                              "GG",
+                              "IM",
+                              "JE",
+                              "ME",
+                              "BL",
+                              "MF",
+                              "RS",
+                              "SX",
+                              "SS",
+                              "XK"
+                            ],
+                            "description": "The 2-letter country code: https://d.to/geo"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this country"
+                          }
+                        },
+                        "required": ["country", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "city": {
+                            "type": "string",
+                            "description": "The name of the city"
+                          },
+                          "country": {
+                            "type": "string",
+                            "enum": [
+                              "AF",
+                              "AL",
+                              "DZ",
+                              "AS",
+                              "AD",
+                              "AO",
+                              "AI",
+                              "AQ",
+                              "AG",
+                              "AR",
+                              "AM",
+                              "AW",
+                              "AU",
+                              "AT",
+                              "AZ",
+                              "BS",
+                              "BH",
+                              "BD",
+                              "BB",
+                              "BY",
+                              "BE",
+                              "BZ",
+                              "BJ",
+                              "BM",
+                              "BT",
+                              "BO",
+                              "BA",
+                              "BW",
+                              "BV",
+                              "BR",
+                              "IO",
+                              "BN",
+                              "BG",
+                              "BF",
+                              "BI",
+                              "KH",
+                              "CM",
+                              "CA",
+                              "CV",
+                              "KY",
+                              "CF",
+                              "TD",
+                              "CL",
+                              "CN",
+                              "CX",
+                              "CC",
+                              "CO",
+                              "KM",
+                              "CG",
+                              "CD",
+                              "CK",
+                              "CR",
+                              "CI",
+                              "HR",
+                              "CU",
+                              "CY",
+                              "CZ",
+                              "DK",
+                              "DJ",
+                              "DM",
+                              "DO",
+                              "EC",
+                              "EG",
+                              "SV",
+                              "GQ",
+                              "ER",
+                              "EE",
+                              "ET",
+                              "FK",
+                              "FO",
+                              "FJ",
+                              "FI",
+                              "FR",
+                              "GF",
+                              "PF",
+                              "TF",
+                              "GA",
+                              "GM",
+                              "GE",
+                              "DE",
+                              "GH",
+                              "GI",
+                              "GR",
+                              "GL",
+                              "GD",
+                              "GP",
+                              "GU",
+                              "GT",
+                              "GN",
+                              "GW",
+                              "GY",
+                              "HT",
+                              "HM",
+                              "VA",
+                              "HN",
+                              "HK",
+                              "HU",
+                              "IS",
+                              "IN",
+                              "ID",
+                              "IR",
+                              "IQ",
+                              "IE",
+                              "IL",
+                              "IT",
+                              "JM",
+                              "JP",
+                              "JO",
+                              "KZ",
+                              "KE",
+                              "KI",
+                              "KP",
+                              "KR",
+                              "KW",
+                              "KG",
+                              "LA",
+                              "LV",
+                              "LB",
+                              "LS",
+                              "LR",
+                              "LY",
+                              "LI",
+                              "LT",
+                              "LU",
+                              "MO",
+                              "MG",
+                              "MW",
+                              "MY",
+                              "MV",
+                              "ML",
+                              "MT",
+                              "MH",
+                              "MQ",
+                              "MR",
+                              "MU",
+                              "YT",
+                              "MX",
+                              "FM",
+                              "MD",
+                              "MC",
+                              "MN",
+                              "MS",
+                              "MA",
+                              "MZ",
+                              "MM",
+                              "NA",
+                              "NR",
+                              "NP",
+                              "NL",
+                              "NC",
+                              "NZ",
+                              "NI",
+                              "NE",
+                              "NG",
+                              "NU",
+                              "NF",
+                              "MK",
+                              "MP",
+                              "NO",
+                              "OM",
+                              "PK",
+                              "PW",
+                              "PS",
+                              "PA",
+                              "PG",
+                              "PY",
+                              "PE",
+                              "PH",
+                              "PN",
+                              "PL",
+                              "PT",
+                              "PR",
+                              "QA",
+                              "RE",
+                              "RO",
+                              "RU",
+                              "RW",
+                              "SH",
+                              "KN",
+                              "LC",
+                              "PM",
+                              "VC",
+                              "WS",
+                              "SM",
+                              "ST",
+                              "SA",
+                              "SN",
+                              "SC",
+                              "SL",
+                              "SG",
+                              "SK",
+                              "SI",
+                              "SB",
+                              "SO",
+                              "ZA",
+                              "GS",
+                              "ES",
+                              "LK",
+                              "SD",
+                              "SR",
+                              "SJ",
+                              "SZ",
+                              "SE",
+                              "CH",
+                              "SY",
+                              "TW",
+                              "TJ",
+                              "TZ",
+                              "TH",
+                              "TL",
+                              "TG",
+                              "TK",
+                              "TO",
+                              "TT",
+                              "TN",
+                              "TR",
+                              "TM",
+                              "TC",
+                              "TV",
+                              "UG",
+                              "UA",
+                              "AE",
+                              "GB",
+                              "US",
+                              "UM",
+                              "UY",
+                              "UZ",
+                              "VU",
+                              "VE",
+                              "VN",
+                              "VG",
+                              "VI",
+                              "WF",
+                              "EH",
+                              "YE",
+                              "ZM",
+                              "ZW",
+                              "AX",
+                              "BQ",
+                              "CW",
+                              "GG",
+                              "IM",
+                              "JE",
+                              "ME",
+                              "BL",
+                              "MF",
+                              "RS",
+                              "SX",
+                              "SS",
+                              "XK"
+                            ],
+                            "description": "The 2-letter country code of the city: https://d.to/geo"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this city"
+                          }
+                        },
+                        "required": ["city", "country", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "device": {
+                            "type": "string",
+                            "description": "The name of the device"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this device"
+                          }
+                        },
+                        "required": ["device", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "browser": {
+                            "type": "string",
+                            "description": "The name of the browser"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this browser"
+                          }
+                        },
+                        "required": ["browser", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "os": {
+                            "type": "string",
+                            "description": "The name of the OS"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this OS"
+                          }
+                        },
+                        "required": ["os", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "referer": {
+                            "type": "string",
+                            "description": "The name of the referer. If unknown, this will be `(direct)`"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this referer"
+                          }
+                        },
+                        "required": ["referer", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "link": {
+                            "type": "string",
+                            "description": "The unique ID of the short link"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this link"
+                          }
+                        },
+                        "required": ["link", "clicks"]
+                      }
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "url": {
+                            "type": "string",
+                            "description": "The destination URL"
+                          },
+                          "clicks": {
+                            "type": "number",
+                            "description": "The number of clicks from this URL"
+                          }
+                        },
+                        "required": ["url", "clicks"]
+                      }
+                    }
+                  ]
                 }
               }
             }
@@ -4142,10 +4853,9 @@
         "operationId": "getTimeseriesAnalytics",
         "x-speakeasy-name-override": "timeseries",
         "summary": "Retrieve timeseries analytics",
+        "deprecated": true,
         "description": "Retrieve the number of clicks for a link, a domain, or the authenticated workspace over a period of time.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -4175,11 +4885,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -4193,19 +4923,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -4570,10 +5329,7 @@
                         "description": "The number of clicks in the interval"
                       }
                     },
-                    "required": [
-                      "start",
-                      "clicks"
-                    ]
+                    "required": ["start", "clicks"]
                   }
                 }
               }
@@ -4614,10 +5370,9 @@
         "operationId": "getCountryAnalytics",
         "x-speakeasy-name-override": "countries",
         "summary": "Retrieve country analytics",
+        "deprecated": true,
         "description": "Retrieve the top countries by number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -4647,11 +5402,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -4665,19 +5440,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -5294,10 +6098,7 @@
                         "description": "The number of clicks from this country"
                       }
                     },
-                    "required": [
-                      "country",
-                      "clicks"
-                    ]
+                    "required": ["country", "clicks"]
                   }
                 }
               }
@@ -5338,10 +6139,9 @@
         "operationId": "getCityAnalytics",
         "x-speakeasy-name-override": "cities",
         "summary": "Retrieve city analytics",
+        "deprecated": true,
         "description": "Retrieve the top countries by number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -5371,11 +6171,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -5389,19 +6209,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -6022,11 +6871,7 @@
                         "description": "The number of clicks from this city"
                       }
                     },
-                    "required": [
-                      "city",
-                      "country",
-                      "clicks"
-                    ]
+                    "required": ["city", "country", "clicks"]
                   }
                 }
               }
@@ -6067,10 +6912,9 @@
         "operationId": "getDeviceAnalytics",
         "x-speakeasy-name-override": "devices",
         "summary": "Retrieve device analytics",
+        "deprecated": true,
         "description": "Retrieve the top devices by number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -6100,11 +6944,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -6118,19 +6982,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -6495,10 +7388,7 @@
                         "description": "The number of clicks from this device"
                       }
                     },
-                    "required": [
-                      "device",
-                      "clicks"
-                    ]
+                    "required": ["device", "clicks"]
                   }
                 }
               }
@@ -6539,10 +7429,9 @@
         "operationId": "getBrowserAnalytics",
         "x-speakeasy-name-override": "browsers",
         "summary": "Retrieve browser analytics",
+        "deprecated": true,
         "description": "Retrieve the top browsers by number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -6572,11 +7461,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -6590,19 +7499,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -6967,10 +7905,7 @@
                         "description": "The number of clicks from this browser"
                       }
                     },
-                    "required": [
-                      "browser",
-                      "clicks"
-                    ]
+                    "required": ["browser", "clicks"]
                   }
                 }
               }
@@ -7011,10 +7946,9 @@
         "operationId": "getOSAnalytics",
         "x-speakeasy-name-override": "os",
         "summary": "Retrieve OS analytics",
+        "deprecated": true,
         "description": "Retrieve the top OS by number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -7044,11 +7978,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -7062,19 +8016,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -7439,10 +8422,7 @@
                         "description": "The number of clicks from this OS"
                       }
                     },
-                    "required": [
-                      "os",
-                      "clicks"
-                    ]
+                    "required": ["os", "clicks"]
                   }
                 }
               }
@@ -7483,10 +8463,9 @@
         "operationId": "getRefererAnalytics",
         "x-speakeasy-name-override": "referers",
         "summary": "Retrieve referer analytics",
+        "deprecated": true,
         "description": "Retrieve the top referers by number of clicks for a link, a domain, or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -7516,11 +8495,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -7534,19 +8533,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -7911,10 +8939,7 @@
                         "description": "The number of clicks from this referer"
                       }
                     },
-                    "required": [
-                      "referer",
-                      "clicks"
-                    ]
+                    "required": ["referer", "clicks"]
                   }
                 }
               }
@@ -7955,10 +8980,9 @@
         "operationId": "getTopLinks",
         "x-speakeasy-name-override": "topLinks",
         "summary": "Retrieve top links",
+        "deprecated": true,
         "description": "Retrieve the top links by number of clicks for a domain or the authenticated workspace.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -7988,11 +9012,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -8006,19 +9050,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -8383,10 +9456,7 @@
                         "description": "The number of clicks from this link"
                       }
                     },
-                    "required": [
-                      "link",
-                      "clicks"
-                    ]
+                    "required": ["link", "clicks"]
                   }
                 }
               }
@@ -8427,10 +9497,9 @@
         "operationId": "getTopURLs",
         "x-speakeasy-name-override": "topUrls",
         "summary": "Retrieve top URLs",
+        "deprecated": true,
         "description": "Retrieve the top URLs by number of clicks for a given short link.",
-        "tags": [
-          "Analytics"
-        ],
+        "tags": ["Analytics"],
         "security": [
           {
             "token": []
@@ -8460,11 +9529,31 @@
           },
           {
             "in": "query",
-            "name": "domain",
-            "description": "The domain of the short link.",
+            "name": "groupBy",
+            "description": "The field to group the analytics by. If undefined, returns the total click count.",
             "schema": {
               "type": "string",
-              "description": "The domain of the short link."
+              "enum": [
+                "timeseries",
+                "country",
+                "city",
+                "device",
+                "browser",
+                "os",
+                "referer",
+                "top_links",
+                "top_urls"
+              ],
+              "description": "The field to group the analytics by. If undefined, returns the total click count."
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain",
+            "description": "The domain to filter analytics for.",
+            "schema": {
+              "type": "string",
+              "description": "The domain to filter analytics for."
             }
           },
           {
@@ -8478,19 +9567,48 @@
           },
           {
             "in": "query",
-            "name": "interval",
-            "description": "The interval to retrieve analytics for.",
+            "name": "linkId",
+            "description": "The unique ID of the short link on Dub.",
             "schema": {
               "type": "string",
-              "enum": [
-                "1h",
-                "24h",
-                "7d",
-                "30d",
-                "90d",
-                "all"
-              ],
-              "description": "The interval to retrieve analytics for."
+              "description": "The unique ID of the short link on Dub."
+            }
+          },
+          {
+            "in": "query",
+            "name": "externalId",
+            "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter.",
+            "schema": {
+              "type": "string",
+              "description": "This is the ID of the link in the your database. Must be prefixed with 'ext_' when passed as a query parameter."
+            }
+          },
+          {
+            "in": "query",
+            "name": "interval",
+            "description": "The interval to retrieve analytics for. Takes precedence over start and end.",
+            "schema": {
+              "type": "string",
+              "enum": ["1h", "24h", "7d", "30d", "90d", "ytd", "1y", "all"],
+              "description": "The interval to retrieve analytics for. Takes precedence over start and end."
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "description": "The start date and time when to retrieve analytics from.",
+            "schema": {
+              "type": "string",
+              "description": "The start date and time when to retrieve analytics from."
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date.",
+            "schema": {
+              "type": "string",
+              "description": "The end date and time when to retrieve analytics from. If not provided, defaults to the current date."
             }
           },
           {
@@ -8855,10 +9973,7 @@
                         "description": "The number of clicks from this URL"
                       }
                     },
-                    "required": [
-                      "url",
-                      "clicks"
-                    ]
+                    "required": ["url", "clicks"]
                   }
                 }
               }
@@ -8900,9 +10015,7 @@
         "x-speakeasy-name-override": "list",
         "summary": "Retrieve a list of workspaces",
         "description": "Retrieve a list of workspaces for the authenticated user.",
-        "tags": [
-          "Workspaces"
-        ],
+        "tags": ["Workspaces"],
         "security": [
           {
             "token": []
@@ -8956,9 +10069,7 @@
         "x-speakeasy-name-override": "create",
         "summary": "Create a workspace",
         "description": "Create a new workspace for the authenticated user.",
-        "tags": [
-          "Workspaces"
-        ],
+        "tags": ["Workspaces"],
         "security": [
           {
             "token": []
@@ -8984,10 +10095,7 @@
                     "type": "string"
                   }
                 },
-                "required": [
-                  "name",
-                  "slug"
-                ]
+                "required": ["name", "slug"]
               }
             }
           }
@@ -9039,9 +10147,7 @@
         "x-speakeasy-name-override": "get",
         "summary": "Retrieve a workspace",
         "description": "Retrieve a workspace for the authenticated user.",
-        "tags": [
-          "Workspaces"
-        ],
+        "tags": ["Workspaces"],
         "security": [
           {
             "token": []
@@ -9106,9 +10212,7 @@
         "x-speakeasy-name-override": "create",
         "summary": "Create a new tag",
         "description": "Create a new tag for the authenticated workspace.",
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "security": [
           {
             "token": []
@@ -9162,9 +10266,7 @@
                     "description": "The color of the tag. If not provided, a random color will be used from the list: red, yellow, green, blue, purple, pink, brown."
                   }
                 },
-                "required": [
-                  "tag"
-                ]
+                "required": ["tag"]
               }
             }
           }
@@ -9214,9 +10316,7 @@
         "x-speakeasy-name-override": "list",
         "summary": "Retrieve a list of tags",
         "description": "Retrieve a list of tags for the authenticated workspace.",
-        "tags": [
-          "Tags"
-        ],
+        "tags": ["Tags"],
         "security": [
           {
             "token": []
@@ -9291,13 +10391,11 @@
     },
     "/domains": {
       "post": {
-        "operationId": "addDomain",
-        "x-speakeasy-name-override": "add",
-        "summary": "Add a domain",
-        "description": "Add a domain to the authenticated workspace.",
-        "tags": [
-          "Domains"
-        ],
+        "operationId": "createDomain",
+        "x-speakeasy-name-override": "create",
+        "summary": "Create a domain",
+        "description": "Create a domain for the authenticated workspace.",
+        "tags": ["Domains"],
         "security": [
           {
             "token": []
@@ -9340,10 +10438,7 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": [
-                      "redirect",
-                      "rewrite"
-                    ],
+                    "enum": ["redirect", "rewrite"],
                     "default": "redirect",
                     "description": "The type of redirect to use for this domain.",
                     "example": "redirect"
@@ -9374,9 +10469,7 @@
                     "example": "https://dub.co/help/article/what-is-dub"
                   }
                 },
-                "required": [
-                  "slug"
-                ]
+                "required": ["slug"]
               }
             }
           }
@@ -9426,9 +10519,7 @@
         "x-speakeasy-name-override": "list",
         "summary": "Retrieve a list of domains",
         "description": "Retrieve a list of domains associated with the authenticated workspace.",
-        "tags": [
-          "Domains"
-        ],
+        "tags": ["Domains"],
         "security": [
           {
             "token": []
@@ -9503,14 +10594,12 @@
     },
     "/domains/{slug}": {
       "patch": {
-        "operationId": "editDomain",
+        "operationId": "updateDomain",
         "x-speakeasy-name-override": "update",
         "x-speakeasy-max-method-params": 2,
-        "summary": "Edit a domain",
-        "description": "Edit a domain for the authenticated workspace.",
-        "tags": [
-          "Domains"
-        ],
+        "summary": "Update a domain",
+        "description": "Update a domain for the authenticated workspace.",
+        "tags": ["Domains"],
         "security": [
           {
             "token": []
@@ -9564,10 +10653,7 @@
                   },
                   "type": {
                     "type": "string",
-                    "enum": [
-                      "redirect",
-                      "rewrite"
-                    ],
+                    "enum": ["redirect", "rewrite"],
                     "default": "redirect",
                     "description": "The type of redirect to use for this domain.",
                     "example": "redirect"
@@ -9645,11 +10731,10 @@
       "delete": {
         "operationId": "deleteDomain",
         "x-speakeasy-name-override": "delete",
+        "x-speakeasy-max-method-params": 1,
         "summary": "Delete a domain",
-        "description": "Delete a domain from a workspace.",
-        "tags": [
-          "Domains"
-        ],
+        "description": "Delete a domain from a workspace. It cannot be undone. This will also delete all the links associated with the domain.",
+        "tags": ["Domains"],
         "security": [
           {
             "token": []
@@ -9703,9 +10788,7 @@
                       "example": "acme.com"
                     }
                   },
-                  "required": [
-                    "slug"
-                  ]
+                  "required": ["slug"]
                 }
               }
             }
@@ -9744,11 +10827,10 @@
       "post": {
         "operationId": "setPrimaryDomain",
         "x-speakeasy-name-override": "setPrimary",
+        "x-speakeasy-max-method-params": 1,
         "summary": "Set a domain as primary",
         "description": "Set a domain as primary for the authenticated workspace.",
-        "tags": [
-          "Domains"
-        ],
+        "tags": ["Domains"],
         "security": [
           {
             "token": []
@@ -9836,9 +10918,7 @@
         "x-speakeasy-max-method-params": 2,
         "summary": "Transfer a domain",
         "description": "Transfer a domain to another workspace within the authenticated account.",
-        "tags": [
-          "Domains"
-        ],
+        "tags": ["Domains"],
         "security": [
           {
             "token": []
@@ -9890,9 +10970,7 @@
                     "description": "The ID of the new workspace to transfer the domain to."
                   }
                 },
-                "required": [
-                  "newWorkspaceId"
-                ]
+                "required": ["newWorkspaceId"]
               }
             }
           }
@@ -9944,9 +11022,7 @@
         "x-speakeasy-name-override": "get",
         "summary": "Retrieve the metatags for a URL",
         "description": "Retrieve the metatags for a URL.",
-        "tags": [
-          "Metatags"
-        ],
+        "tags": ["Metatags"],
         "parameters": [
           {
             "in": "query",
@@ -9987,11 +11063,7 @@
                       "example": "https://assets.dub.co/thumbnail.jpg"
                     }
                   },
-                  "required": [
-                    "title",
-                    "description",
-                    "image"
-                  ]
+                  "required": ["title", "description", "image"]
                 }
               }
             }
@@ -10025,6 +11097,11 @@
             "type": "string",
             "description": "The short link slug. If not provided, a random 7-character slug will be generated."
           },
+          "externalId": {
+            "type": "string",
+            "nullable": true,
+            "description": "This is the ID of the link in your database. If set, it can be used to identify the link in the future. Must be prefixed with 'ext_' when passed as a query parameter."
+          },
           "url": {
             "type": "string",
             "format": "uri",
@@ -10038,7 +11115,6 @@
           "expiresAt": {
             "type": "string",
             "nullable": true,
-            "format": "date-time",
             "description": "The date and time when the short link will expire in ISO-8601 format."
           },
           "expiredUrl": {
@@ -11190,6 +12266,7 @@
           "id",
           "domain",
           "key",
+          "externalId",
           "url",
           "archived",
           "expiresAt",
@@ -11306,16 +12383,11 @@
               "properties": {
                 "role": {
                   "type": "string",
-                  "enum": [
-                    "owner",
-                    "member"
-                  ],
+                  "enum": ["owner", "member"],
                   "description": "The role of the authenticated user in the workspace."
                 }
               },
-              "required": [
-                "role"
-              ]
+              "required": ["role"]
             },
             "description": "The role of the authenticated user in the workspace."
           },
@@ -11335,10 +12407,7 @@
                   "description": "Whether the domain is the primary domain for the workspace."
                 }
               },
-              "required": [
-                "slug",
-                "primary"
-              ]
+              "required": ["slug", "primary"]
             },
             "description": "The domains of the workspace."
           },
@@ -11395,16 +12464,16 @@
             "description": "The color of the tag."
           }
         },
-        "required": [
-          "id",
-          "name",
-          "color"
-        ],
+        "required": ["id", "name", "color"],
         "title": "Tag"
       },
       "DomainSchema": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "The unique identifier of the domain."
+          },
           "slug": {
             "type": "string",
             "description": "The domain name.",
@@ -11446,10 +12515,7 @@
           "type": {
             "type": "string",
             "description": "The type of redirect to use for this domain.",
-            "enum": [
-              "redirect",
-              "rewrite"
-            ]
+            "enum": ["redirect", "rewrite"]
           },
           "clicks": {
             "type": "number",
@@ -11458,6 +12524,7 @@
           }
         },
         "required": [
+          "id",
           "slug",
           "verified",
           "primary",
@@ -11484,9 +12551,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "bad_request"
-                      ],
+                      "enum": ["bad_request"],
                       "description": "A short code indicating the error code returned.",
                       "example": "bad_request"
                     },
@@ -11501,15 +12566,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#bad_request"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11527,9 +12587,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "unauthorized"
-                      ],
+                      "enum": ["unauthorized"],
                       "description": "A short code indicating the error code returned.",
                       "example": "unauthorized"
                     },
@@ -11544,15 +12602,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#unauthorized"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11570,9 +12623,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "forbidden"
-                      ],
+                      "enum": ["forbidden"],
                       "description": "A short code indicating the error code returned.",
                       "example": "forbidden"
                     },
@@ -11587,15 +12638,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#forbidden"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11613,9 +12659,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "not_found"
-                      ],
+                      "enum": ["not_found"],
                       "description": "A short code indicating the error code returned.",
                       "example": "not_found"
                     },
@@ -11630,15 +12674,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#not_found"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11656,9 +12695,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "conflict"
-                      ],
+                      "enum": ["conflict"],
                       "description": "A short code indicating the error code returned.",
                       "example": "conflict"
                     },
@@ -11673,15 +12710,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#conflict"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11699,9 +12731,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "invite_expired"
-                      ],
+                      "enum": ["invite_expired"],
                       "description": "A short code indicating the error code returned.",
                       "example": "invite_expired"
                     },
@@ -11716,15 +12746,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#invite_expired"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11742,9 +12767,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "unprocessable_entity"
-                      ],
+                      "enum": ["unprocessable_entity"],
                       "description": "A short code indicating the error code returned.",
                       "example": "unprocessable_entity"
                     },
@@ -11759,15 +12782,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#unprocessable_entity"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11785,9 +12803,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "rate_limit_exceeded"
-                      ],
+                      "enum": ["rate_limit_exceeded"],
                       "description": "A short code indicating the error code returned.",
                       "example": "rate_limit_exceeded"
                     },
@@ -11802,15 +12818,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#rate_limit_exceeded"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }
@@ -11828,9 +12839,7 @@
                   "properties": {
                     "code": {
                       "type": "string",
-                      "enum": [
-                        "internal_server_error"
-                      ],
+                      "enum": ["internal_server_error"],
                       "description": "A short code indicating the error code returned.",
                       "example": "internal_server_error"
                     },
@@ -11845,15 +12854,10 @@
                       "example": "https://dub.co/docs/api-reference/errors#internal_server_error"
                     }
                   },
-                  "required": [
-                    "code",
-                    "message"
-                  ]
+                  "required": ["code", "message"]
                 }
               },
-              "required": [
-                "error"
-              ]
+              "required": ["error"]
             }
           }
         }

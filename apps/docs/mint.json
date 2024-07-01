@@ -2,8 +2,8 @@
   "$schema": "https://mintlify.com/schema.json",
   "name": "Dub.co Docs",
   "logo": {
-    "dark": "/logos/logotype-dark.svg",
-    "light": "/logos/logotype.svg",
+    "dark": "/logos/wordmark-dark.svg",
+    "light": "/logos/wordmark.svg",
     "href": "https://dub.co"
   },
   "favicon": "/logos/favicon.png",
@@ -30,7 +30,7 @@
     "name": "Dashboard",
     "url": "https://app.dub.co"
   },
-  "openapi": "https://api.dub.co",
+  "openapi": "http://api.dub.co",
   "tabs": [
     {
       "name": "API Reference",
@@ -59,6 +59,36 @@
       "pages": ["introduction", "data-model"]
     },
     {
+      "group": "Quickstart",
+      "pages": [
+        {
+          "group": "Typescript",
+          "icon": "js",
+          "pages": [
+            "quickstart/typescript",
+            "quickstart/nextjs",
+            "quickstart/remix",
+            "quickstart/nuxt",
+            "quickstart/express"
+          ]
+        },
+        {
+          "group": "Go",
+          "icon": "golang",
+          "pages": ["quickstart/go"]
+        },
+        {
+          "group": "Python",
+          "icon": "python",
+          "pages": [
+            "quickstart/python",
+            "quickstart/flask",
+            "quickstart/django"
+          ]
+        }
+      ]
+    },
+    {
       "group": "Resources",
       "pages": ["integrations", "examples"]
     },
@@ -70,6 +100,7 @@
       "group": "API Reference",
       "pages": [
         "api-reference/introduction",
+        "api-reference/tokens",
         "api-reference/rate-limits",
         "api-reference/errors"
       ]
@@ -80,6 +111,7 @@
         "api-reference/endpoint/create-a-new-link",
         "api-reference/endpoint/retrieve-a-link",
         "api-reference/endpoint/update-a-link",
+        "api-reference/endpoint/upsert-a-link",
         "api-reference/endpoint/delete-a-link",
         "api-reference/endpoint/retrieve-a-list-of-links",
         "api-reference/endpoint/retrieve-number-of-links",
@@ -87,23 +119,12 @@
       ]
     },
     {
-      "group": "QR Codes",
-      "pages": ["api-reference/endpoint/retrieve-a-qr-code"]
+      "group": "Analytics",
+      "pages": ["api-reference/endpoint/retrieve-analytics"]
     },
     {
-      "group": "Analytics",
-      "pages": [
-        "api-reference/endpoint/retrieve-clicks",
-        "api-reference/endpoint/retrieve-timeseries",
-        "api-reference/endpoint/retrieve-country",
-        "api-reference/endpoint/retrieve-city",
-        "api-reference/endpoint/retrieve-device",
-        "api-reference/endpoint/retrieve-browser",
-        "api-reference/endpoint/retrieve-os",
-        "api-reference/endpoint/retrieve-referer",
-        "api-reference/endpoint/retrieve-top-links",
-        "api-reference/endpoint/retrieve-top-urls"
-      ]
+      "group": "QR Codes",
+      "pages": ["api-reference/endpoint/retrieve-a-qr-code"]
     },
     {
       "group": "Workspaces",
@@ -116,12 +137,10 @@
     {
       "group": "Domains",
       "pages": [
-        "api-reference/endpoint/add-a-domain",
+        "api-reference/endpoint/create-a-domain",
         "api-reference/endpoint/update-a-domain",
         "api-reference/endpoint/delete-a-domain",
-        "api-reference/endpoint/retrieve-a-list-of-domains",
-        "api-reference/endpoint/set-a-primary-domain",
-        "api-reference/endpoint/transfer-a-domain"
+        "api-reference/endpoint/retrieve-a-list-of-domains"
       ]
     },
     {
@@ -136,6 +155,14 @@
       "pages": ["api-reference/endpoint/retrieve-metatags"]
     },
     {
+      "group": "Conversions [BETA]",
+      "pages": [
+        "api-reference/endpoint/track-lead",
+        "api-reference/endpoint/track-sale",
+        "api-reference/endpoint/track-customer"
+      ]
+    },
+    {
       "group": "SDKs",
       "pages": ["sdks/overview"]
     },
@@ -145,10 +172,12 @@
         "sdks/typescript/overview",
         {
           "group": "Links",
+          "icon": "link",
           "pages": [
             "sdks/typescript/links/create",
             "sdks/typescript/links/get",
             "sdks/typescript/links/update",
+            "sdks/typescript/links/upsert",
             "sdks/typescript/links/delete",
             "sdks/typescript/links/list",
             "sdks/typescript/links/count",
@@ -157,21 +186,12 @@
         },
         {
           "group": "Analytics",
-          "pages": [
-            "sdks/typescript/analytics/clicks",
-            "sdks/typescript/analytics/timeseries",
-            "sdks/typescript/analytics/countries",
-            "sdks/typescript/analytics/cities",
-            "sdks/typescript/analytics/devices",
-            "sdks/typescript/analytics/browsers",
-            "sdks/typescript/analytics/os",
-            "sdks/typescript/analytics/referers",
-            "sdks/typescript/analytics/top-links",
-            "sdks/typescript/analytics/top-urls"
-          ]
+          "icon": "chart-line",
+          "pages": ["sdks/typescript/analytics/retrieve"]
         },
         {
           "group": "Workspaces",
+          "icon": "folder",
           "pages": [
             "sdks/typescript/workspaces/create",
             "sdks/typescript/workspaces/get",
@@ -180,21 +200,22 @@
         },
         {
           "group": "Domains",
+          "icon": "globe",
           "pages": [
-            "sdks/typescript/domains/add",
+            "sdks/typescript/domains/create",
             "sdks/typescript/domains/update",
             "sdks/typescript/domains/delete",
-            "sdks/typescript/domains/list",
-            "sdks/typescript/domains/set-primary",
-            "sdks/typescript/domains/transfer"
+            "sdks/typescript/domains/list"
           ]
         },
         {
           "group": "Tags",
+          "icon": "tag",
           "pages": ["sdks/typescript/tags/create", "sdks/typescript/tags/list"]
         },
         {
           "group": "Metatags",
+          "icon": "image",
           "pages": ["sdks/typescript/metatags/get"]
         }
       ]
@@ -208,8 +229,8 @@
   },
   "footerSocials": {
     "twitter": "https://twitter.com/dubdotco",
-    "github": "https://github.com/steven-tey/dub",
-    "linkedin": "https://www.linkedin.com/company/dubhq",
+    "github": "https://github.com/dubinc/dub",
+    "linkedin": "https://www.linkedin.com/company/dubinc",
     "website": "https://dub.co"
   },
   "redirects": [
@@ -240,6 +261,98 @@
     {
       "source": "/api-reference/endpoint/edit-a-domain",
       "destination": "/api-reference/endpoint/update-a-domain"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-browser",
+      "destination": "/api-reference/endpoint/retrieve-browsers-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-city",
+      "destination": "/api-reference/endpoint/retrieve-cities-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-clicks",
+      "destination": "/api-reference/endpoint/retrieve-clicks-count"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-country",
+      "destination": "/api-reference/endpoint/retrieve-countries-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-device",
+      "destination": "/api-reference/endpoint/retrieve-devices-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-os",
+      "destination": "/api-reference/endpoint/retrieve-os-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-referer",
+      "destination": "/api-reference/endpoint/retrieve-referers-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-timeseries",
+      "destination": "/api-reference/endpoint/retrieve-timeseries-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-top-links",
+      "destination": "/api-reference/endpoint/retrieve-top-links-by-clicks"
+    },
+    {
+      "source": "/api-reference/endpoint/retrieve-top-urls",
+      "destination": "/api-reference/endpoint/retrieve-top-urls-by-clicks"
+    },
+    {
+      "source": "/sdks/typescript/analytics/clicks",
+      "destination": "/sdks/typescript/analytics/clicks/count"
+    },
+    {
+      "source": "/sdks/typescript/analytics/timeseries",
+      "destination": "/sdks/typescript/analytics/clicks/timeseries"
+    },
+    {
+      "source": "/sdks/typescript/analytics/browsers",
+      "destination": "/sdks/typescript/analytics/clicks/browsers"
+    },
+    {
+      "source": "/sdks/typescript/analytics/cities",
+      "destination": "/sdks/typescript/analytics/clicks/cities"
+    },
+    {
+      "source": "/sdks/typescript/analytics/countries",
+      "destination": "/sdks/typescript/analytics/clicks/countries"
+    },
+    {
+      "source": "/sdks/typescript/analytics/devices",
+      "destination": "/sdks/typescript/analytics/clicks/devices"
+    },
+    {
+      "source": "/sdks/typescript/analytics/os",
+      "destination": "/sdks/typescript/analytics/clicks/os"
+    },
+    {
+      "source": "/sdks/typescript/analytics/referers",
+      "destination": "/sdks/typescript/analytics/clicks/referers"
+    },
+    {
+      "source": "/sdks/typescript/analytics/top-links",
+      "destination": "/sdks/typescript/analytics/clicks/top-links"
+    },
+    {
+      "source": "/sdks/typescript/analytics/top-urls",
+      "destination": "/sdks/typescript/analytics/clicks/top-urls"
+    },
+    {
+      "source": "/quickstart/nodejs",
+      "destination": "/quickstart/typescript"
+    },
+    {
+      "source": "/sdks/typescript/domains/add",
+      "destination": "/sdks/typescript/domains/create"
+    },
+    {
+      "source": "/api-reference/endpoint/add-a-domain",
+      "destination": "/api-reference/endpoint/create-a-domain"
     }
   ]
 }

@@ -1,8 +1,9 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { recordLink } from "@/lib/tinybird";
 import { LinkProps, ProcessedLinkProps, RedisLinkProps } from "@/lib/types";
 import { formatRedisLink, redis } from "@/lib/upstash";
 import { getParamsFromURL, truncate } from "@dub/utils";
+import { updateLinksUsage } from "./update-links-usage";
 import { combineTagIds, transformLink } from "./utils";
 
 export async function bulkCreateLinks({
@@ -12,9 +13,9 @@ export async function bulkCreateLinks({
 }) {
   if (links.length === 0) return [];
 
-  // create links via $transaction (because Prisma doesn't support nested createMany)
+  // create links via Promise.all (because Prisma doesn't support nested createMany)
   // ref: https://github.com/prisma/prisma/issues/8131#issuecomment-997667070
-  const createdLinks = await prisma.$transaction(
+  const createdLinks = await Promise.all(
     links.map(({ tagId, tagIds, tagNames, ...link }) => {
       const { utm_source, utm_medium, utm_campaign, utm_term, utm_content } =
         getParamsFromURL(link.url);
@@ -38,7 +39,7 @@ export async function bulkCreateLinks({
           ...(tagNames?.length &&
             link.projectId && {
               tags: {
-                create: tagNames.map((tagName) => ({
+                create: tagNames.filter(Boolean).map((tagName) => ({
                   tag: {
                     connect: {
                       name_projectId: {
@@ -56,7 +57,9 @@ export async function bulkCreateLinks({
             combinedTagIds.length > 0 && {
               tags: {
                 createMany: {
-                  data: combinedTagIds.map((tagId) => ({ tagId })),
+                  data: combinedTagIds
+                    .filter(Boolean)
+                    .map((tagId) => ({ tagId })),
                 },
               },
             }),
@@ -102,9 +105,6 @@ export async function propagateBulkLinkChanges(
       // this technically will be a synchronous function since isIframeable won't be run for bulk link creation
       const formattedLink = await formatRedisLink(link);
       linksByDomain[domain][key.toLowerCase()] = formattedLink;
-
-      // record link in Tinybird
-      await recordLink({ link });
     }),
   );
 
@@ -115,16 +115,21 @@ export async function propagateBulkLinkChanges(
   await Promise.all([
     // update Redis
     pipeline.exec(),
-    // update links usage for workspace
-    prisma.project.update({
-      where: {
-        id: links[0].projectId!, // this will always be present
-      },
-      data: {
-        linksUsage: {
-          increment: links.length,
-        },
-      },
+    // update Tinybird
+    recordLink(
+      links.map((link) => ({
+        link_id: link.id,
+        domain: link.domain,
+        key: link.key,
+        url: link.url,
+        tag_ids: link.tags.map((tag) => tag.tagId),
+        workspace_id: link.projectId,
+        created_at: link.createdAt,
+      })),
+    ),
+    updateLinksUsage({
+      workspaceId: links[0].projectId!, // this will always be present
+      increment: links.length,
     }),
   ]);
 }
