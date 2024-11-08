@@ -19,7 +19,7 @@ export type Series<T extends Datum = any, TValue = number> = {
   id: string;
   isActive?: boolean;
   valueAccessor: AccessorFn<T, TValue>;
-  color?: string | AccessorFn<T, string>;
+  colorClassName?: string;
 };
 
 export type Data<T extends Datum> = TimeSeriesDatum<T>[];
@@ -30,7 +30,9 @@ type ChartRequiredProps<T extends Datum = any> = {
 };
 
 type ChartOptionalProps<T extends Datum = any> = {
+  type?: "area" | "bar";
   tooltipContent?: (datum: TimeSeriesDatum<T>) => ReactElement | string;
+  tooltipClassName?: string;
 
   /**
    * Absolute pixel values for margins around the chart area.
@@ -60,7 +62,9 @@ export type ChartContext<T extends Datum = any> = Required<ChartProps<T>> & {
   height: number;
   startDate: Date;
   endDate: Date;
-  xScale: ScaleTypeToD3Scale<number>["utc"];
+  xScale:
+    | ScaleTypeToD3Scale<number>["utc"]
+    | ScaleTypeToD3Scale<number>["band"];
   yScale: ScaleTypeToD3Scale<number>["linear"];
   minY: number;
   maxY: number;

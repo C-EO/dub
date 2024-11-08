@@ -1,6 +1,6 @@
 import useWorkspace from "@/lib/swr/use-workspace";
 import { LinkProps } from "@/lib/types";
-import { Button, Modal, useToastWithUndo } from "@dub/ui";
+import { Button, LinkLogo, Modal, useToastWithUndo } from "@dub/ui";
 import { getApexDomain, linkConstructor } from "@dub/utils";
 import {
   Dispatch,
@@ -12,7 +12,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
-import LinkLogo from "../links/link-logo";
 
 const sendArchiveRequest = ({
   linkId,
@@ -40,15 +39,27 @@ const revalidateLinks = () => {
   );
 };
 
-function ArchiveLinkModal({
-  showArchiveLinkModal,
-  setShowArchiveLinkModal,
-  props,
-}: {
+type ArchiveLinkModalProps = {
   showArchiveLinkModal: boolean;
   setShowArchiveLinkModal: Dispatch<SetStateAction<boolean>>;
   props: LinkProps;
-}) {
+};
+
+function ArchiveLinkModal(props: ArchiveLinkModalProps) {
+  return (
+    <Modal
+      showModal={props.showArchiveLinkModal}
+      setShowModal={props.setShowArchiveLinkModal}
+    >
+      <ArchiveLinkModalInner {...props} />
+    </Modal>
+  );
+}
+
+function ArchiveLinkModalInner({
+  setShowArchiveLinkModal,
+  props,
+}: ArchiveLinkModalProps) {
   const toastWithUndo = useToastWithUndo();
 
   const { id: workspaceId } = useWorkspace();
@@ -111,10 +122,7 @@ function ArchiveLinkModal({
   };
 
   return (
-    <Modal
-      showModal={showArchiveLinkModal}
-      setShowModal={setShowArchiveLinkModal}
-    >
+    <>
       <div className="flex flex-col items-center justify-center space-y-3 border-b border-gray-200 px-4 py-4 pt-8 text-center sm:px-16">
         <LinkLogo apexDomain={apexDomain} />
         <h3 className="text-lg font-medium">
@@ -135,7 +143,7 @@ function ArchiveLinkModal({
           text={`Confirm ${props.archived ? "unarchive" : "archive"}`}
         />
       </div>
-    </Modal>
+    </>
   );
 }
 

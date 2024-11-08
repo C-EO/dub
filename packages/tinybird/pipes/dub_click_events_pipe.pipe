@@ -6,12 +6,15 @@ SQL >
         click_id,
         link_id,
         url,
+        continent,
         country,
         city,
         device,
         browser,
         os,
         referer,
+        qr,
+        ip
     FROM dub_click_events
 
 TYPE materialized

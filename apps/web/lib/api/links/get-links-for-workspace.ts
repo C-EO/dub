@@ -1,6 +1,6 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import z from "@/lib/zod";
-import { getLinksQuerySchemaExtended } from "@/lib/zod/schemas";
+import { getLinksQuerySchemaExtended } from "@/lib/zod/schemas/links";
 import { combineTagIds, transformLink } from "./utils";
 
 export async function getLinksForWorkspace({
@@ -12,10 +12,14 @@ export async function getLinksForWorkspace({
   search,
   sort = "createdAt",
   page,
+  pageSize,
   userId,
   showArchived,
   withTags,
   includeUser,
+  includeWebhooks,
+  includeDashboard,
+  linkIds,
 }: z.infer<typeof getLinksQuerySchemaExtended> & {
   workspaceId: string;
 }) {
@@ -29,7 +33,7 @@ export async function getLinksForWorkspace({
       ...(search && {
         OR: [
           {
-            key: { contains: search },
+            shortLink: { contains: search },
           },
           {
             url: { contains: search },
@@ -59,9 +63,9 @@ export async function getLinksForWorkspace({
             }
           : {}),
       ...(userId && { userId }),
+      ...(linkIds && { id: { in: linkIds } }),
     },
     include: {
-      user: includeUser,
       tags: {
         include: {
           tag: {
@@ -73,14 +77,15 @@ export async function getLinksForWorkspace({
           },
         },
       },
+      user: includeUser,
+      webhooks: includeWebhooks,
+      dashboard: includeDashboard,
     },
     orderBy: {
       [sort]: "desc",
     },
-    take: 100,
-    ...(page && {
-      skip: (page - 1) * 100,
-    }),
+    take: pageSize,
+    skip: (page - 1) * pageSize,
   });
 
   return links.map((link) => transformLink(link));

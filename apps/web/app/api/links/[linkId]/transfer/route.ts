@@ -1,10 +1,12 @@
-import { getAnalytics } from "@/lib/analytics";
+import { getAnalytics } from "@/lib/analytics/get-analytics";
 import { DubApiError } from "@/lib/api/errors";
+import { getLinkOrThrow } from "@/lib/api/links/get-link-or-throw";
 import { withWorkspace } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { recordLink } from "@/lib/tinybird";
 import { formatRedisLink, redis } from "@/lib/upstash";
 import z from "@/lib/zod";
+import { waitUntil } from "@vercel/functions";
 import { NextResponse } from "next/server";
 
 const transferLinkBodySchema = z.object({
@@ -18,6 +20,11 @@ const transferLinkBodySchema = z.object({
 // POST /api/links/[linkId]/transfer – transfer a link to another workspace
 export const POST = withWorkspace(
   async ({ req, headers, session, params, workspace }) => {
+    const link = await getLinkOrThrow({
+      workspace,
+      linkId: params.linkId,
+    });
+
     const { newWorkspaceId } = transferLinkBodySchema.parse(await req.json());
 
     const newWorkspace = await prisma.project.findUnique({
@@ -36,22 +43,6 @@ export const POST = withWorkspace(
       },
     });
 
-    const link = await prisma.link.findUnique({
-      where: {
-        id: params.linkId,
-      },
-      include: {
-        tags: true,
-      },
-    });
-    // technically this is not needed since the link is already checked in withWorkspace
-    if (!link) {
-      throw new DubApiError({
-        code: "not_found",
-        message: "Link not found.",
-      });
-    }
-
     if (!newWorkspace || newWorkspace.users.length === 0) {
       throw new DubApiError({
         code: "not_found",
@@ -66,69 +57,72 @@ export const POST = withWorkspace(
       });
     }
 
-    const linkClicks = await getAnalytics({
+    const { clicks: linkClicks } = await getAnalytics({
+      event: "clicks",
+      groupBy: "count",
       linkId: link.id,
-      endpoint: "clicks",
       interval: "30d",
     });
 
-    const response = await Promise.all([
-      prisma.link.update({
-        where: {
-          id: link.id,
+    const response = await prisma.link.update({
+      where: {
+        id: link.id,
+      },
+      data: {
+        projectId: newWorkspaceId,
+        // remove tags when transferring link
+        tags: {
+          deleteMany: {},
         },
-        data: {
-          projectId: newWorkspaceId,
-          // remove tags when transferring link
-          tags: {
-            deleteMany: {},
-          },
-        },
-      }),
-      redis.hset(link.domain.toLowerCase(), {
-        [link.key.toLowerCase()]: await formatRedisLink({
-          ...link,
-          projectId: newWorkspaceId,
+      },
+    });
+
+    waitUntil(
+      Promise.all([
+        redis.hset(link.domain.toLowerCase(), {
+          [link.key.toLowerCase()]: await formatRedisLink({
+            ...link,
+            projectId: newWorkspaceId,
+          }),
         }),
-      }),
-      recordLink({
-        link: {
-          ...link,
-          projectId: newWorkspaceId,
-        },
-      }),
-      // decrement old workspace usage
-      prisma.project.update({
-        where: {
-          id: workspace.id,
-        },
-        data: {
-          usage: {
-            decrement: linkClicks,
+        recordLink({
+          link_id: link.id,
+          domain: link.domain,
+          key: link.key,
+          url: link.url,
+          tag_ids: [],
+          workspace_id: newWorkspaceId,
+          created_at: link.createdAt,
+        }),
+        // increment new workspace usage
+        prisma.project.update({
+          where: {
+            id: newWorkspaceId,
           },
-          linksUsage: {
-            decrement: 1,
+          data: {
+            usage: {
+              increment: linkClicks,
+            },
+            linksUsage: {
+              increment: 1,
+            },
           },
-        },
-      }),
-      // increment new workspace usage
-      prisma.project.update({
-        where: {
-          id: newWorkspaceId,
-        },
-        data: {
-          usage: {
-            increment: linkClicks,
+        }),
+
+        // Remove the webhooks associated with the link
+        prisma.linkWebhook.deleteMany({
+          where: {
+            linkId: link.id,
           },
-          linksUsage: {
-            increment: 1,
-          },
-        },
-      }),
-    ]);
+        }),
+      ]),
+    );
 
     return NextResponse.json(response, {
       headers,
     });
+  },
+  {
+    requiredPermissions: ["links.write"],
   },
 );

@@ -1,17 +1,32 @@
-import { getAnalytics } from "@/lib/analytics";
-import { setRootDomain } from "@/lib/api/domains";
+import { getAnalytics } from "@/lib/analytics/get-analytics";
+import { getDomainOrThrow } from "@/lib/api/domains/get-domain-or-throw";
 import { DubApiError } from "@/lib/api/errors";
 import { withWorkspace } from "@/lib/auth";
 import { qstash } from "@/lib/cron";
-import prisma from "@/lib/prisma";
-import { DomainSchema, transferDomainBodySchema } from "@/lib/zod/schemas";
+import { prisma } from "@/lib/prisma";
+import {
+  DomainSchema,
+  transferDomainBodySchema,
+} from "@/lib/zod/schemas/domains";
 import { APP_DOMAIN_WITH_NGROK } from "@dub/utils";
 import { NextResponse } from "next/server";
 
 // POST /api/domains/[domain]/transfer – transfer a domain to another workspace
 export const POST = withWorkspace(
   async ({ req, headers, session, params, workspace }) => {
-    const { domain } = params;
+    const { slug: domain, registeredDomain } = await getDomainOrThrow({
+      workspace,
+      domain: params.domain,
+      dubDomainChecks: true,
+    });
+
+    if (registeredDomain) {
+      throw new DubApiError({
+        code: "forbidden",
+        message: "You cannot delete a Dub-provisioned domain.",
+      });
+    }
+
     const { newWorkspaceId } = transferDomainBodySchema.parse(await req.json());
 
     if (newWorkspaceId === workspace.id) {
@@ -52,17 +67,6 @@ export const POST = withWorkspace(
       });
     }
 
-    const domainRecord = await prisma.domain.findUnique({
-      where: { slug: domain, projectId: workspace.id },
-    });
-
-    if (!domainRecord) {
-      throw new DubApiError({
-        code: "not_found",
-        message: "Domain not found. Make sure you spelled it correctly.",
-      });
-    }
-
     if (newWorkspace.domains.length >= newWorkspace.domainsLimit) {
       throw new DubApiError({
         code: "exceeded_limit",
@@ -88,12 +92,12 @@ export const POST = withWorkspace(
       });
     }
 
-    const totalLinkClicks = await getAnalytics({
+    const { clicks: totalLinkClicks } = await getAnalytics({
       domain,
+      event: "clicks",
+      groupBy: "count",
       workspaceId: workspace.id,
-      endpoint: "clicks",
       interval: "30d",
-      root: false,
     });
 
     // Update the domain to use the new workspace
@@ -104,16 +108,6 @@ export const POST = withWorkspace(
           projectId: newWorkspaceId,
           primary: newWorkspace.domains.length === 0,
         },
-      }),
-      setRootDomain({
-        id: domainRecord.id,
-        domain,
-        projectId: newWorkspaceId,
-        ...(newWorkspace.plan !== "free" &&
-          domainRecord.target && {
-            url: domainRecord.target,
-          }),
-        rewrite: domainRecord.type === "rewrite",
       }),
       prisma.project.update({
         where: { id: workspace.id },
@@ -151,5 +145,7 @@ export const POST = withWorkspace(
 
     return NextResponse.json(DomainSchema.parse(domainResponse), { headers });
   },
-  { requiredRole: ["owner"] },
+  {
+    requiredPermissions: ["domains.write"],
+  },
 );

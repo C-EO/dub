@@ -1,4 +1,4 @@
-import { DUB_LOGO, getPlanDetails } from "@dub/utils";
+import { DUB_WORDMARK, getPlanDetails } from "@dub/utils";
 import {
   Body,
   Container,
@@ -33,8 +33,7 @@ export default function UpgradeEmail({
           <Container className="mx-auto my-10 max-w-[500px] rounded border border-solid border-gray-200 px-10 py-5">
             <Section className="mt-8">
               <Img
-                src={DUB_LOGO}
-                width="40"
+                src={DUB_WORDMARK}
                 height="40"
                 alt="Dub"
                 className="mx-auto my-0"
@@ -65,14 +64,7 @@ export default function UpgradeEmail({
               !
             </Text>
             <Text className="text-sm leading-6 text-black">
-              As you might already know, we are a{" "}
-              <Link
-                href="https://d.to/mission"
-                className="font-medium text-blue-600 no-underline"
-              >
-                100% bootstrapped
-              </Link>{" "}
-              and{" "}
+              As you might already know, we are fully{" "}
               <Link
                 href="https://d.to/github"
                 className="font-medium text-blue-600 no-underline"
@@ -87,7 +79,12 @@ export default function UpgradeEmail({
             </Text>
             {planDetails.features.map((feature) => (
               <Text className="ml-1 text-sm leading-4 text-black">
-                ◆ {feature.text}
+                ◆{" "}
+                {feature.footnote?.href ? (
+                  <Link href={feature.footnote.href}>{feature.text}</Link>
+                ) : (
+                  feature.text
+                )}
               </Text>
             ))}
             <Text className="text-sm leading-6 text-black">

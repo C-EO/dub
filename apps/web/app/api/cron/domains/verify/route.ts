@@ -3,8 +3,9 @@ import {
   getDomainResponse,
   verifyDomain,
 } from "@/lib/api/domains";
-import { verifySignature } from "@/lib/cron";
-import prisma from "@/lib/prisma";
+import { handleAndReturnErrorResponse } from "@/lib/api/errors";
+import { verifyVercelSignature } from "@/lib/cron/verify-vercel";
+import { prisma } from "@/lib/prisma";
 import { log } from "@dub/utils";
 import { NextResponse } from "next/server";
 import { handleDomainUpdates } from "./utils";
@@ -15,15 +16,14 @@ import { handleDomainUpdates } from "./utils";
  * If a domain is invalid for more than 28 days, we send a second and final reminder email to the workspace owner.
  * If a domain is invalid for more than 30 days, we delete it from the database.
  **/
-// Runs every 3 hours (0 */3 * * *)
+// Runs every hour (0 * * * *)
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
-  const validSignature = await verifySignature(req);
-  if (!validSignature) {
-    return new Response("Unauthorized", { status: 401 });
-  }
-
   try {
+    await verifyVercelSignature(req);
+
     const domains = await prisma.domain.findMany({
       where: {
         slug: {
@@ -45,14 +45,7 @@ export async function GET(req: Request) {
         slug: true,
         verified: true,
         primary: true,
-        clicks: true,
         createdAt: true,
-        projectId: true,
-        _count: {
-          select: {
-            links: true,
-          },
-        },
       },
       orderBy: {
         lastChecked: "asc",
@@ -62,7 +55,7 @@ export async function GET(req: Request) {
 
     const results = await Promise.allSettled(
       domains.map(async (domain) => {
-        const { slug, verified, primary, createdAt, _count } = domain;
+        const { slug, verified, primary, createdAt } = domain;
         const [domainJson, configJson] = await Promise.all([
           getDomainResponse(slug),
           getConfigResponse(slug),
@@ -103,8 +96,6 @@ export async function GET(req: Request) {
           verified: newVerified,
           primary,
           changed,
-          clicks: domain.clicks,
-          linksCount: _count.links,
         });
 
         return {
@@ -123,6 +114,6 @@ export async function GET(req: Request) {
       message: "Domains cron failed. Error: " + error.message,
       type: "errors",
     });
-    return NextResponse.json({ error: error.message });
+    return handleAndReturnErrorResponse(error);
   }
 }

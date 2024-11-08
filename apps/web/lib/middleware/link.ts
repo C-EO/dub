@@ -1,54 +1,67 @@
-import { detectBot, getFinalUrl, parse } from "@/lib/middleware/utils";
+import {
+  createResponseWithCookie,
+  detectBot,
+  getFinalUrl,
+  isSupportedDeeplinkProtocol,
+  parse,
+} from "@/lib/middleware/utils";
 import { recordClick } from "@/lib/tinybird";
 import { formatRedisLink, redis } from "@/lib/upstash";
 import {
-  DUB_DEMO_LINKS,
   DUB_HEADERS,
   LEGAL_WORKSPACE_ID,
   LOCALHOST_GEO_DATA,
+  isDubDomain,
+  isUnsupportedKey,
+  nanoid,
   punyEncode,
 } from "@dub/utils";
+import { cookies } from "next/headers";
 import {
   NextFetchEvent,
   NextRequest,
   NextResponse,
   userAgent,
 } from "next/server";
-import { isBlacklistedReferrer } from "../edge-config";
 import { getLinkViaEdge } from "../planetscale";
+import { getDomainViaEdge } from "../planetscale/get-domain-via-edge";
 import { RedisLinkProps } from "../types";
 
 export default async function LinkMiddleware(
   req: NextRequest,
   ev: NextFetchEvent,
 ) {
-  let { domain, fullKey: key } = parse(req);
+  let { domain, fullKey: originalKey } = parse(req);
 
-  if (!domain || !key) {
+  if (!domain) {
     return NextResponse.next();
   }
 
   // encode the key to ascii
   // links on Dub are case insensitive by default
-  key = punyEncode(key.toLowerCase());
-
-  const demoLink = DUB_DEMO_LINKS.find(
-    (l) => l.domain === domain && l.key === key,
-  );
-
-  // if it's a demo link, block bad referrers in production
-  if (
-    process.env.NODE_ENV !== "development" &&
-    demoLink &&
-    (await isBlacklistedReferrer(req.headers.get("referer")))
-  ) {
-    return new Response("Don't DDoS me pls 🥺", { status: 429 });
-  }
+  let key = punyEncode(originalKey.toLowerCase());
 
   const inspectMode = key.endsWith("+");
   // if inspect mode is enabled, remove the trailing `+` from the key
   if (inspectMode) {
     key = key.slice(0, -1);
+  }
+
+  // if key is empty string, set to _root (root domain link)
+  if (key === "") {
+    key = "_root";
+  }
+
+  // we don't support .php links (too much bot traffic)
+  // hence we redirect to the root domain and add `dub-no-track` header to avoid tracking bot traffic
+  if (isUnsupportedKey(key)) {
+    return NextResponse.redirect(new URL("/?dub-no-track=1", req.url), {
+      headers: {
+        ...DUB_HEADERS,
+        "X-Robots-Tag": "googlebot: noindex",
+      },
+      status: 302,
+    });
   }
 
   let link = await redis.hget<RedisLinkProps>(domain, key);
@@ -57,12 +70,21 @@ export default async function LinkMiddleware(
     const linkData = await getLinkViaEdge(domain, key);
 
     if (!linkData) {
-      // short link not found, redirect to root
-      // TODO: log 404s (https://github.com/dubinc/dub/issues/559)
-      return NextResponse.redirect(new URL("/", req.url), {
-        ...DUB_HEADERS,
-        status: 302,
-      });
+      // check if domain has notFoundUrl configured
+      const domainData = await getDomainViaEdge(domain);
+      if (domainData?.notFoundUrl) {
+        return NextResponse.redirect(domainData.notFoundUrl, {
+          headers: {
+            ...DUB_HEADERS,
+            "X-Robots-Tag": "googlebot: noindex",
+          },
+          status: 302,
+        });
+      } else {
+        return NextResponse.rewrite(new URL(`/${domain}/not-found`, req.url), {
+          headers: DUB_HEADERS,
+        });
+      }
     }
 
     // format link to fit the RedisLinkProps interface
@@ -76,9 +98,10 @@ export default async function LinkMiddleware(
   }
 
   const {
-    id,
+    id: linkId,
     url,
     password,
+    trackConversion,
     proxy,
     rewrite,
     iframeable,
@@ -87,13 +110,24 @@ export default async function LinkMiddleware(
     android,
     geo,
     expiredUrl,
+    doIndex,
+    webhookIds,
   } = link;
+
+  // by default, we only index default dub domain links (e.g. dub.sh)
+  // everything else is not indexed by default, unless the user has explicitly set it to be indexed
+  const shouldIndex = isDubDomain(domain) || doIndex === true;
 
   // only show inspect modal if the link is not password protected
   if (inspectMode && !password) {
     return NextResponse.rewrite(
       new URL(`/inspect/${domain}/${encodeURIComponent(key)}+`, req.url),
-      DUB_HEADERS,
+      {
+        headers: {
+          ...DUB_HEADERS,
+          ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+        },
+      },
     );
   }
 
@@ -108,7 +142,14 @@ export default async function LinkMiddleware(
     if (!pw || (await getLinkViaEdge(domain, key))?.password !== pw) {
       return NextResponse.rewrite(
         new URL(`/password/${domain}/${encodeURIComponent(key)}`, req.url),
-        DUB_HEADERS,
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && {
+              "X-Robots-Tag": "googlebot: noindex",
+            }),
+          },
+        },
       );
     } else if (pw) {
       // strip it from the URL if it's correct
@@ -118,30 +159,63 @@ export default async function LinkMiddleware(
 
   // if the link is banned
   if (link.projectId === LEGAL_WORKSPACE_ID) {
-    return NextResponse.rewrite(new URL("/banned", req.url), DUB_HEADERS);
+    return NextResponse.rewrite(new URL("/banned", req.url), {
+      headers: {
+        ...DUB_HEADERS,
+        ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+      },
+    });
   }
 
   // if the link has expired
   if (expiresAt && new Date(expiresAt) < new Date()) {
     if (expiredUrl) {
-      return NextResponse.redirect(expiredUrl, DUB_HEADERS);
+      return NextResponse.redirect(expiredUrl, {
+        headers: {
+          ...DUB_HEADERS,
+          ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+        },
+        status: 302,
+      });
     } else {
-      return NextResponse.rewrite(
-        new URL(`/expired/${domain}`, req.url),
-        DUB_HEADERS,
-      );
+      return NextResponse.rewrite(new URL(`/expired/${domain}`, req.url), {
+        headers: {
+          ...DUB_HEADERS,
+          ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+        },
+      });
     }
   }
 
-  const searchParams = req.nextUrl.searchParams;
-  // only track the click when there is no `dub-no-track` header or query param
-  if (
-    !(
-      req.headers.get("dub-no-track") ||
-      searchParams.get("dub-no-track") === "1"
-    )
-  ) {
-    ev.waitUntil(recordClick({ req, id, url: getFinalUrl(url, { req }) }));
+  const cookieStore = cookies();
+  let clickId =
+    cookieStore.get("dub_id")?.value || cookieStore.get("dclid")?.value;
+  if (!clickId) {
+    clickId = nanoid(16);
+  }
+
+  // for root domain links, if there's no destination URL, rewrite to placeholder page
+  if (!url) {
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url,
+        webhookIds,
+      }),
+    );
+
+    return createResponseWithCookie(
+      NextResponse.rewrite(new URL(`/${domain}`, req.url), {
+        headers: {
+          ...DUB_HEADERS,
+          // we only index root domain links if they're not subdomains
+          ...(shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+        },
+      }),
+      { clickId, path: `/${originalKey}` },
+    );
   }
 
   const isBot = detectBot(req);
@@ -151,49 +225,214 @@ export default async function LinkMiddleware(
 
   // rewrite to proxy page (/proxy/[domain]/[key]) if it's a bot and proxy is enabled
   if (isBot && proxy) {
-    return NextResponse.rewrite(
-      new URL(`/proxy/${domain}/${encodeURIComponent(key)}`, req.url),
-      DUB_HEADERS,
+    return createResponseWithCookie(
+      NextResponse.rewrite(
+        new URL(`/proxy/${domain}/${encodeURIComponent(key)}`, req.url),
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+        },
+      ),
+      { clickId, path: `/${originalKey}` },
+    );
+
+    // rewrite to deeplink page if the link is a mailto: or tel:
+  } else if (isSupportedDeeplinkProtocol(url)) {
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url,
+        webhookIds,
+      }),
+    );
+
+    return createResponseWithCookie(
+      NextResponse.rewrite(
+        new URL(
+          `/deeplink/${encodeURIComponent(
+            getFinalUrl(url, {
+              req,
+              clickId: trackConversion ? clickId : undefined,
+            }),
+          )}`,
+          req.url,
+        ),
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+        },
+      ),
+      { clickId, path: `/${originalKey}` },
     );
 
     // rewrite to target URL if link cloaking is enabled
   } else if (rewrite) {
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url,
+        webhookIds,
+      }),
+    );
+
     if (iframeable) {
-      return NextResponse.rewrite(
-        new URL(`/cloaked/${encodeURIComponent(url)}`, req.url),
-        DUB_HEADERS,
+      return createResponseWithCookie(
+        NextResponse.rewrite(
+          new URL(
+            `/cloaked/${encodeURIComponent(
+              getFinalUrl(url, {
+                req,
+                clickId: trackConversion ? clickId : undefined,
+              }),
+            )}`,
+            req.url,
+          ),
+          {
+            headers: {
+              ...DUB_HEADERS,
+              ...(!shouldIndex && {
+                "X-Robots-Tag": "googlebot: noindex",
+              }),
+            },
+          },
+        ),
+        { clickId, path: `/${originalKey}` },
       );
     } else {
       // if link is not iframeable, use Next.js rewrite instead
-      return NextResponse.rewrite(url, DUB_HEADERS);
+      return createResponseWithCookie(
+        NextResponse.rewrite(url, {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+        }),
+        { clickId, path: `/${originalKey}` },
+      );
     }
 
     // redirect to iOS link if it is specified and the user is on an iOS device
   } else if (ios && userAgent(req).os?.name === "iOS") {
-    return NextResponse.redirect(getFinalUrl(ios, { req }), {
-      ...DUB_HEADERS,
-      status: 302,
-    });
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url: ios,
+        webhookIds,
+      }),
+    );
+
+    return createResponseWithCookie(
+      NextResponse.redirect(
+        getFinalUrl(ios, {
+          req,
+          clickId: trackConversion ? clickId : undefined,
+        }),
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+          status: key === "_root" ? 301 : 302,
+        },
+      ),
+      { clickId, path: `/${originalKey}` },
+    );
 
     // redirect to Android link if it is specified and the user is on an Android device
   } else if (android && userAgent(req).os?.name === "Android") {
-    return NextResponse.redirect(getFinalUrl(android, { req }), {
-      ...DUB_HEADERS,
-      status: 302,
-    });
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url: android,
+        webhookIds,
+      }),
+    );
+
+    return createResponseWithCookie(
+      NextResponse.redirect(
+        getFinalUrl(android, {
+          req,
+          clickId: trackConversion ? clickId : undefined,
+        }),
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+          status: key === "_root" ? 301 : 302,
+        },
+      ),
+      { clickId, path: `/${originalKey}` },
+    );
 
     // redirect to geo-specific link if it is specified and the user is in the specified country
   } else if (geo && country && country in geo) {
-    return NextResponse.redirect(getFinalUrl(geo[country], { req }), {
-      ...DUB_HEADERS,
-      status: 302,
-    });
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url: geo[country],
+        webhookIds,
+      }),
+    );
+
+    return createResponseWithCookie(
+      NextResponse.redirect(
+        getFinalUrl(geo[country], {
+          req,
+          clickId: trackConversion ? clickId : undefined,
+        }),
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+          status: key === "_root" ? 301 : 302,
+        },
+      ),
+      { clickId, path: `/${originalKey}` },
+    );
 
     // regular redirect
   } else {
-    return NextResponse.redirect(getFinalUrl(url, { req }), {
-      ...DUB_HEADERS,
-      status: 302,
-    });
+    ev.waitUntil(
+      recordClick({
+        req,
+        linkId,
+        clickId,
+        url,
+        webhookIds,
+      }),
+    );
+
+    return createResponseWithCookie(
+      NextResponse.redirect(
+        getFinalUrl(url, {
+          req,
+          clickId: trackConversion ? clickId : undefined,
+        }),
+        {
+          headers: {
+            ...DUB_HEADERS,
+            ...(!shouldIndex && { "X-Robots-Tag": "googlebot: noindex" }),
+          },
+          status: key === "_root" ? 301 : 302,
+        },
+      ),
+      { clickId, path: `/${originalKey}` },
+    );
   }
 }

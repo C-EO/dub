@@ -1,6 +1,7 @@
 import { bulkCreateLinks } from "@/lib/api/links";
+import { createId } from "@/lib/api/utils";
 import { qstash } from "@/lib/cron";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/upstash";
 import { randomBadgeColor } from "@/ui/links/tag-badge";
 import { APP_DOMAIN_WITH_NGROK } from "@dub/utils";
@@ -27,7 +28,7 @@ export const importLinksFromShort = async ({
   shortApiKey: string;
 }) => {
   const data = await fetch(
-    `https://api.short.io/api/links?domain_id=${domainId}&limit=150${
+    `https://api.short.io/api/links?domain_id=${domainId}&limit=50${
       pageToken ? `&pageToken=${pageToken}` : ""
     }`,
     {
@@ -37,6 +38,7 @@ export const importLinksFromShort = async ({
       },
     },
   ).then((res) => res.json());
+
   const { links, nextPageToken } = data;
 
   let tagsToCreate = new Set<string>();
@@ -79,6 +81,24 @@ export const importLinksFromShort = async ({
     )
     .filter(Boolean);
 
+  // check if links are already in the database
+  const alreadyCreatedLinks = await prisma.link.findMany({
+    where: {
+      domain,
+      key: {
+        in: importedLinks.map((link) => link.key),
+      },
+    },
+    select: {
+      key: true,
+    },
+  });
+
+  // filter out links that are already in the database
+  const linksToCreate = importedLinks.filter(
+    (link) => !alreadyCreatedLinks.some((l) => l.key === link.key),
+  );
+
   // import tags into database
   if (importTags && tagsToCreate.size > 0) {
     const existingTags = await prisma.tag.findMany({
@@ -95,6 +115,7 @@ export const importLinksFromShort = async ({
         // filter out existing tags with the same name
         .filter((tag) => !existingTags.some((t) => t.name === tag))
         .map((tag) => ({
+          id: createId({ prefix: "tag_" }),
           name: tag,
           color: randomBadgeColor(),
           projectId: workspaceId,
@@ -114,7 +135,7 @@ export const importLinksFromShort = async ({
 
   // bulk create links
   await bulkCreateLinks({
-    links: importedLinks.map(({ tags, ...rest }) => {
+    links: linksToCreate.map(({ tags, ...rest }) => {
       return {
         ...rest,
         ...(importTags && {

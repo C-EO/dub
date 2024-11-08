@@ -6,24 +6,5 @@ export default function WorkspaceSettingsLayout({
 }: {
   children: ReactNode;
 }) {
-  const tabs = [
-    {
-      name: "General",
-      segment: null,
-    },
-    {
-      name: "Billing",
-      segment: "billing",
-    },
-    {
-      name: "People",
-      segment: "people",
-    },
-    {
-      name: "Security",
-      segment: "security",
-    },
-  ];
-
-  return <SettingsLayout tabs={tabs}>{children}</SettingsLayout>;
+  return <SettingsLayout>{children}</SettingsLayout>;
 }

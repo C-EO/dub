@@ -1,7 +1,9 @@
 import { addDomainToVercel } from "@/lib/api/domains";
+import { bulkCreateLinks } from "@/lib/api/links";
+import { createId } from "@/lib/api/utils";
 import { withWorkspace } from "@/lib/auth";
 import { qstash } from "@/lib/cron";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { BitlyGroupProps } from "@/lib/types";
 import { redis } from "@/lib/upstash";
 import { APP_DOMAIN_WITH_NGROK } from "@dub/utils";
@@ -52,25 +54,39 @@ export const GET = withWorkspace(async ({ workspace }) => {
 export const POST = withWorkspace(async ({ req, workspace, session }) => {
   const { selectedDomains, selectedGroupTags } = await req.json();
 
+  const domains = await prisma.domain.findMany({
+    where: { projectId: workspace.id },
+    select: { slug: true },
+  });
+
   // check if there are domains that are not in the workspace
   // if yes, add them to the workspace
-  const doaminsNotInWorkspace = selectedDomains.filter(
-    ({ domain }) => !workspace.domains?.find((d) => d.slug === domain),
+  const domainsNotInWorkspace = selectedDomains.filter(
+    ({ domain }) => !domains?.find((d) => d.slug === domain),
   );
-  if (doaminsNotInWorkspace.length > 0) {
+
+  if (domainsNotInWorkspace.length > 0) {
     await Promise.allSettled([
       prisma.domain.createMany({
-        data: doaminsNotInWorkspace.map(({ domain }) => ({
+        data: domainsNotInWorkspace.map(({ domain }) => ({
+          id: createId({ prefix: "dom_" }),
           slug: domain,
-          target: null,
-          type: "redirect",
           projectId: workspace.id,
           primary: false,
         })),
         skipDuplicates: true,
       }),
-      doaminsNotInWorkspace.map(({ slug }) => addDomainToVercel(slug)),
+      domainsNotInWorkspace.flatMap(({ domain }) => addDomainToVercel(domain)),
     ]);
+    await bulkCreateLinks({
+      links: domainsNotInWorkspace.map(({ domain }) => ({
+        domain,
+        key: "_root",
+        url: "",
+        userId: session?.user?.id,
+        projectId: workspace.id,
+      })),
+    });
   }
 
   // convert data to array of groups with their respective domains

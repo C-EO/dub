@@ -11,10 +11,9 @@ import {
   RadioGroupItem,
   TooltipContent,
   useMediaQuery,
-  useRouterStuff,
 } from "@dub/ui";
-import { capitalize, cn } from "@dub/utils";
-import va from "@vercel/analytics";
+import { capitalize, cn, pluralize } from "@dub/utils";
+import posthog from "posthog-js";
 import {
   Dispatch,
   FormEvent,
@@ -84,7 +83,9 @@ function AddEditTagModal({
       <div className="flex flex-col items-center justify-center space-y-3 border-b border-gray-200 px-4 py-4 pt-8 sm:px-16">
         <Logo />
         <div className="flex flex-col space-y-1 text-center">
-          <h3 className="text-lg font-medium">{props ? "Edit" : "Add"} tag</h3>
+          <h3 className="text-lg font-medium">
+            {props ? "Edit" : "Create"} tag
+          </h3>
           <p className="text-sm text-gray-500">
             Use tags to organize your links.{" "}
             <a
@@ -116,17 +117,24 @@ function AddEditTagModal({
             }),
           }).then(async (res) => {
             if (res.status === 200 || res.status === 201) {
-              va.track(props ? "Edited Tag" : "Created Tag");
+              posthog.capture(props ? "tag_edited" : "tag_created", {
+                tag_id: data.id,
+                tag_name: data.name,
+                tag_color: data.color,
+              });
               await Promise.all([
-                mutate(`/api/tags?workspaceId=${workspaceId}`),
-                props
-                  ? mutate(
-                      (key) =>
-                        typeof key === "string" && key.startsWith("/api/links"),
-                      undefined,
-                      { revalidate: true },
-                    )
-                  : null,
+                mutate(
+                  (key) =>
+                    typeof key === "string" && key.startsWith("/api/tags"),
+                  undefined,
+                  { revalidate: true },
+                ),
+                mutate(
+                  (key) =>
+                    typeof key === "string" && key.startsWith("/api/links"),
+                  undefined,
+                  { revalidate: true },
+                ),
               ]);
               toast.success(endpoint.successMessage);
               setShowAddEditTagModal(false);
@@ -210,31 +218,22 @@ function AddTagButton({
 }: {
   setShowAddEditTagModal: Dispatch<SetStateAction<boolean>>;
 }) {
-  const { plan, nextPlan, tagsLimit } = useWorkspace();
+  const { slug, plan, tagsLimit } = useWorkspace();
   const { tags } = useTags();
-  const { queryParams } = useRouterStuff();
   const exceededTags = tags && tagsLimit && tags.length >= tagsLimit;
 
   return (
     <div>
       <Button
-        variant="secondary"
-        text="Add"
-        className="h-7 px-2"
+        variant="primary"
+        text="Create tag"
+        className="h-9 rounded-lg"
         disabledTooltip={
           exceededTags ? (
             <TooltipContent
-              title={`You can only add up to ${tagsLimit} tag${
-                tagsLimit === 1 ? "" : "s"
-              } on the ${capitalize(plan)} plan. Upgrade to add more tags`}
+              title={`You can only add up to ${tagsLimit} ${pluralize("tag", tagsLimit || 0)} on the ${capitalize(plan)} plan. Upgrade to add more tags`}
               cta="Upgrade"
-              onClick={() => {
-                queryParams({
-                  set: {
-                    upgrade: nextPlan.name.toLowerCase(),
-                  },
-                });
-              }}
+              href={`/${slug}/upgrade`}
             />
           ) : undefined
         }

@@ -1,24 +1,15 @@
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { LoadingSpinner, Logo } from "@dub/ui";
+import { prisma } from "@/lib/prisma";
+import EmptyState from "@/ui/shared/empty-state";
+import { LoadingSpinner } from "@dub/ui";
+import { LinkBroken, Users6 } from "@dub/ui/src/icons";
 import { APP_NAME } from "@dub/utils";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
 
 export const runtime = "nodejs";
 
-const PageCopy = ({ title, message }: { title: string; message: string }) => {
-  return (
-    <>
-      <h1 className="font-display text-3xl font-bold sm:text-4xl">{title}</h1>
-      <p className="max-w-lg text-gray-600 [text-wrap:balance] sm:text-lg">
-        {message}
-      </p>
-    </>
-  );
-};
-
-export default function InvitesPage({
+export default function InitesPage({
   params,
 }: {
   params: {
@@ -26,17 +17,14 @@ export default function InvitesPage({
   };
 }) {
   return (
-    <div className="flex h-screen flex-col items-center justify-center space-y-6 text-center">
-      <Logo className="h-12 w-12" />
+    <div className="flex flex-col items-center justify-center gap-6 text-center">
       <Suspense
         fallback={
-          <>
-            <PageCopy
-              title="Verifying Invite"
-              message={`${APP_NAME} is verifying your invite link...`}
-            />
-            <LoadingSpinner className="h-7 w-7" />
-          </>
+          <EmptyState
+            icon={LoadingSpinner}
+            title="Verifying Invite"
+            description={`${APP_NAME} is verifying your invite link. This might take a few seconds...`}
+          />
         }
       >
         <VerifyInvite code={params.code} />
@@ -70,7 +58,13 @@ async function VerifyInvite({ code }: { code: string }) {
       },
       _count: {
         select: {
-          users: true,
+          users: {
+            where: {
+              user: {
+                isMachine: false,
+              },
+            },
+          },
         },
       },
     },
@@ -78,12 +72,11 @@ async function VerifyInvite({ code }: { code: string }) {
 
   if (!workspace) {
     return (
-      <>
-        <PageCopy
-          title="Invalid Invite"
-          message="The invite link you are trying to use is invalid. Please contact the workspace owner for a new invite."
-        />
-      </>
+      <EmptyState
+        icon={LinkBroken}
+        title="Invalid Invite Link"
+        description="The invite link you are trying to use is invalid. Please contact the workspace owner for more information."
+      />
     );
   }
 
@@ -94,9 +87,10 @@ async function VerifyInvite({ code }: { code: string }) {
 
   if (workspace._count.users >= workspace.usersLimit) {
     return (
-      <PageCopy
+      <EmptyState
+        icon={Users6}
         title="User Limit Reached"
-        message="The workspace you are trying to join is currently full. Please contact the workspace owner for more information."
+        description="The workspace you are trying to join is currently full. Please contact the workspace owner for more information."
       />
     );
   }
@@ -105,6 +99,9 @@ async function VerifyInvite({ code }: { code: string }) {
     data: {
       userId: session.user.id,
       projectId: workspace.id,
+      notificationPreference: {
+        create: {}, // by default, users are opted in to all notifications
+      },
     },
   });
 

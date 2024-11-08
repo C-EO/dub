@@ -16,17 +16,24 @@ export const parseDateTime = (str: Date | string) => {
   return chrono.parseDate(str);
 };
 
-export const formatDate = (datetime: Date | string) => {
+export const formatDate = (
+  datetime: Date | string,
+  options?: Intl.DateTimeFormatOptions,
+) => {
   if (datetime.toString() === "Invalid Date") return "";
   return new Date(datetime).toLocaleDateString("en-US", {
     day: "numeric",
     month: "long",
     year: "numeric",
     timeZone: "UTC",
+    ...options,
   });
 };
 
-export const formatDateTime = (datetime: Date | string) => {
+export const formatDateTime = (
+  datetime: Date | string,
+  options?: Intl.DateTimeFormatOptions,
+) => {
   if (datetime.toString() === "Invalid Date") return "";
   return new Date(datetime).toLocaleTimeString("en-US", {
     month: "short",
@@ -35,7 +42,14 @@ export const formatDateTime = (datetime: Date | string) => {
     hour: "numeric",
     minute: "numeric",
     hour12: true,
+    ...options,
   });
+};
+
+// Function to get the number of days between two dates
+export const getDaysDifference = (startDate: Date, endDate: Date) => {
+  const diffTime = Math.abs(endDate.getTime() - startDate.getTime());
+  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 };
 
 export const getFirstAndLastDay = (day: number) => {

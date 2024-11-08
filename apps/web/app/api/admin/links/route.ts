@@ -1,5 +1,5 @@
 import { withAdmin } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { DUB_DOMAINS_ARRAY } from "@dub/utils";
 import { NextResponse } from "next/server";
 
@@ -29,7 +29,7 @@ export const GET = withAdmin(async ({ searchParams }) => {
       ...(search && {
         OR: [
           {
-            key: { contains: search },
+            shortLink: { contains: search },
           },
           {
             url: { contains: search },

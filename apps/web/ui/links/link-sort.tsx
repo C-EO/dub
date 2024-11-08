@@ -1,33 +1,17 @@
-import { Sort } from "@/ui/shared/icons";
 import { IconMenu, Popover, Tick, useRouterStuff } from "@dub/ui";
+import { cn } from "@dub/utils";
 import { ChevronDown, SortDesc } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useMemo, useState } from "react";
-
-const sortOptions = [
-  {
-    display: "Date Added",
-    slug: "createdAt",
-  },
-  {
-    display: "Number of Clicks",
-    slug: "clicks",
-  },
-  {
-    display: "Last Clicked",
-    slug: "lastClicked",
-  },
-];
+import { useContext, useState } from "react";
+import { LinksDisplayContext, sortOptions } from "./links-display-provider";
 
 export default function LinkSort() {
-  const [openPopover, setOpenPopover] = useState(false);
-  const searchParams = useSearchParams();
-  const sort = searchParams?.get("sort");
   const { queryParams } = useRouterStuff();
 
-  const selectedSort = useMemo(() => {
-    return sortOptions.find((s) => s.slug === sort) || sortOptions[0];
-  }, [sort]);
+  const [openPopover, setOpenPopover] = useState(false);
+
+  const { sort: sortSlug, setSort } = useContext(LinksDisplayContext);
+  const selectedSort =
+    sortOptions.find((s) => s.slug === sortSlug) ?? sortOptions[0];
 
   return (
     <Popover
@@ -37,10 +21,12 @@ export default function LinkSort() {
             <button
               key={slug}
               onClick={() => {
+                setSort(slug);
                 queryParams({
-                  set: {
-                    sort: slug,
-                  },
+                  del: [
+                    "sort", // Remove legacy query param
+                    "page", // Reset pagination
+                  ],
                 });
                 setOpenPopover(false);
               }}
@@ -50,7 +36,7 @@ export default function LinkSort() {
                 text={display}
                 icon={<SortDesc className="h-4 w-4" />}
               />
-              {selectedSort.slug === slug && (
+              {sortSlug === slug && (
                 <Tick className="h-4 w-4" aria-hidden="true" />
               )}
             </button>
@@ -62,23 +48,17 @@ export default function LinkSort() {
     >
       <button
         onClick={() => setOpenPopover(!openPopover)}
-        className="flex w-48 items-center justify-between space-x-2 rounded-md bg-white px-3 py-2.5 shadow transition-all duration-75 hover:shadow-md"
+        className={cn(
+          "group flex h-10 cursor-pointer appearance-none items-center gap-x-2 truncate rounded-md border px-3 text-sm outline-none transition-all",
+          "border-gray-200 bg-white text-gray-900 placeholder-gray-400",
+          "focus-visible:border-gray-500 data-[state=open]:border-gray-500 data-[state=open]:ring-4 data-[state=open]:ring-gray-200",
+        )}
       >
-        <IconMenu
-          text={sort ? selectedSort.display : "Sort by"}
-          icon={
-            sort ? (
-              <SortDesc className="h-4 w-4" />
-            ) : (
-              <Sort className="h-4 w-4 shrink-0" />
-            )
-          }
-        />
-        <ChevronDown
-          className={`h-5 w-5 text-gray-400 ${
-            openPopover ? "rotate-180 transform" : ""
-          } transition-all duration-75`}
-        />
+        <SortDesc className="h-4 w-4" />
+        <span className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-left text-gray-900">
+          {selectedSort.display || "Sort by"}
+        </span>
+        <ChevronDown className="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform duration-75 group-data-[state=open]:rotate-180" />
       </button>
     </Popover>
   );

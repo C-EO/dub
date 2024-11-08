@@ -1,13 +1,16 @@
 import { GOOGLE_FAVICON_URL, cn } from "@dub/utils";
-import { Globe } from "lucide-react";
+import { ImageProps } from "next/image";
 import { BlurImage } from "./blur-image";
+import { Globe2 } from "./icons";
 
 export function LinkLogo({
   apexDomain,
   className,
+  imageProps,
 }: {
   apexDomain?: string | null;
   className?: string;
+  imageProps?: Partial<ImageProps>;
 }) {
   return apexDomain ? (
     <BlurImage
@@ -16,6 +19,8 @@ export function LinkLogo({
       className={cn("h-8 w-8 rounded-full sm:h-10 sm:w-10", className)}
       width={20}
       height={20}
+      draggable={false}
+      {...imageProps}
     />
   ) : (
     <div
@@ -24,7 +29,7 @@ export function LinkLogo({
         className,
       )}
     >
-      <Globe className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
+      <Globe2 className="h-4 w-4 text-gray-600 sm:h-5 sm:w-5" />
     </div>
   );
 }

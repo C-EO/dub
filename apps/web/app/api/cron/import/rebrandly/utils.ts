@@ -1,6 +1,7 @@
 import { bulkCreateLinks } from "@/lib/api/links";
+import { createId } from "@/lib/api/utils";
 import { qstash } from "@/lib/cron";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { redis } from "@/lib/upstash";
 import { randomBadgeColor } from "@/ui/links/tag-badge";
 import { APP_DOMAIN_WITH_NGROK } from "@dub/utils";
@@ -42,6 +43,7 @@ export const importTagsFromRebrandly = async ({
   // import tags into database
   await prisma.tag.createMany({
     data: tags.map((tag) => ({
+      id: createId({ prefix: "tag_" }),
       name: tag.name,
       color: randomBadgeColor(),
       projectId: workspaceId,
@@ -199,8 +201,26 @@ export const importLinksFromRebrandly = async ({
       )
       .filter(Boolean);
 
+    // check if links are already in the database
+    const alreadyCreatedLinks = await prisma.link.findMany({
+      where: {
+        domain,
+        key: {
+          in: importedLinks.map((link) => link.key),
+        },
+      },
+      select: {
+        key: true,
+      },
+    });
+
+    // filter out links that are already in the database
+    const linksToCreate = importedLinks.filter(
+      (link) => !alreadyCreatedLinks.some((l) => l.key === link.key),
+    );
+
     // bulk create links
-    await bulkCreateLinks({ links: importedLinks });
+    await bulkCreateLinks({ links: linksToCreate });
 
     count += importedLinks.length;
 

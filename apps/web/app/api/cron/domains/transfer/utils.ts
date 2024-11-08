@@ -1,11 +1,10 @@
-import prisma from "@/lib/prisma";
-import { recordLink } from "@/lib/tinybird";
+import { prisma } from "@/lib/prisma";
 import { formatRedisLink, redis } from "@/lib/upstash";
 import { Link } from "@prisma/client";
 import { sendEmail } from "emails";
 import DomainTransferred from "emails/domain-transferred";
 
-// Update links in the redis
+// Update links in redis
 export const updateLinksInRedis = async ({
   newWorkspaceId,
   domain,
@@ -39,7 +38,7 @@ export const updateLinksInRedis = async ({
 };
 
 // Send email to the owner after the domain transfer is completed
-export const domainTransferredEmail = async ({
+export const sendDomainTransferredEmail = async ({
   domain,
   currentWorkspaceId,
   newWorkspaceId,
@@ -92,21 +91,4 @@ export const domainTransferredEmail = async ({
       linksCount,
     }),
   });
-};
-
-// Record link in Tinybird
-export const recordLinks = async ({
-  newWorkspaceId,
-  links,
-}: {
-  newWorkspaceId: string;
-  links: Link[];
-}) => {
-  await Promise.all(
-    links.map((link) =>
-      recordLink({ link: { ...link, projectId: newWorkspaceId } }),
-    ),
-  );
-
-  return;
 };

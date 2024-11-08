@@ -3,21 +3,20 @@ import { expectedLink } from "tests/utils/schema";
 import { afterAll, describe, expect, test } from "vitest";
 import { randomId } from "../utils/helpers";
 import { IntegrationHarness } from "../utils/integration";
-import { link } from "../utils/resource";
+import { E2E_LINK } from "../utils/resource";
 
-const { domain, url } = link;
+const { domain, url } = E2E_LINK;
 
 describe.sequential("GET /links/{linkId}", async () => {
   const h = new IntegrationHarness();
   const { workspace, http, user } = await h.init();
-  const { workspaceId } = workspace;
+  const workspaceId = workspace.id;
   const projectId = workspaceId.replace("ws_", "");
   const externalId = randomId();
   const key = randomId();
 
   const { data: newLink } = await http.post<Link>({
     path: "/links",
-    query: { workspaceId },
     body: {
       url,
       domain,
@@ -33,7 +32,6 @@ describe.sequential("GET /links/{linkId}", async () => {
   test("by linkId", async () => {
     const { status, data: link } = await http.get<Link>({
       path: `/links/${newLink.id}`,
-      query: { workspaceId },
     });
 
     expect(status).toEqual(200);
@@ -42,14 +40,12 @@ describe.sequential("GET /links/{linkId}", async () => {
       ...link,
       projectId,
       userId: user.id,
-      tags: [],
     });
   });
 
   test("by externalId", async () => {
     const { status, data: link } = await http.get<Link>({
       path: `/links/ext_${externalId}`,
-      query: { workspaceId },
     });
 
     expect(status).toEqual(200);
@@ -58,7 +54,6 @@ describe.sequential("GET /links/{linkId}", async () => {
       ...link,
       projectId,
       userId: user.id,
-      tags: [],
     });
   });
 });
@@ -66,14 +61,13 @@ describe.sequential("GET /links/{linkId}", async () => {
 describe.sequential("GET /links/info", async () => {
   const h = new IntegrationHarness();
   const { workspace, http, user } = await h.init();
-  const { workspaceId } = workspace;
+  const workspaceId = workspace.id;
   const projectId = workspaceId.replace("ws_", "");
   const externalId = randomId();
   const key = randomId();
 
   const { data: newLink } = await http.post<Link>({
     path: "/links",
-    query: { workspaceId },
     body: {
       url,
       domain,
@@ -101,7 +95,6 @@ describe.sequential("GET /links/info", async () => {
       userId: user.id,
       shortLink: `https://${domain}/${key}`,
       qrCode: `https://api.dub.co/qr?url=https://${domain}/${key}?qr=1`,
-      tags: [],
     });
   });
 
@@ -117,7 +110,6 @@ describe.sequential("GET /links/info", async () => {
       ...link,
       projectId,
       userId: user.id,
-      tags: [],
     });
   });
 
@@ -133,7 +125,6 @@ describe.sequential("GET /links/info", async () => {
       ...link,
       projectId,
       userId: user.id,
-      tags: [],
     });
   });
 });

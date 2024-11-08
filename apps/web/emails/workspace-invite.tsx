@@ -1,4 +1,4 @@
-import { DUB_LOGO } from "@dub/utils";
+import { DUB_WORDMARK } from "@dub/utils";
 import {
   Body,
   Container,
@@ -15,7 +15,7 @@ import {
 import Footer from "./components/footer";
 
 export default function WorkspaceInvite({
-  email = "panicking@thedis.co",
+  email = "panic@thedis.co",
   appName = "Dub.co",
   url = "http://localhost:8888/api/auth/callback/email?callbackUrl=http%3A%2F%2Fapp.localhost%3A3000%2Flogin&token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxx&email=youremail@gmail.com",
   workspaceName = "Acme",
@@ -40,8 +40,7 @@ export default function WorkspaceInvite({
           <Container className="mx-auto my-10 max-w-[500px] rounded border border-solid border-gray-200 px-10 py-5">
             <Section className="mt-8">
               <Img
-                src={DUB_LOGO}
-                width="40"
+                src={DUB_WORDMARK}
                 height="40"
                 alt={appName}
                 className="mx-auto my-0"

@@ -1,12 +1,19 @@
 import { useRouterStuff } from "@dub/ui";
 import { fetcher } from "@dub/utils";
 import { useEffect, useState } from "react";
-import useSWR from "swr";
-import { LinkWithTagsProps, UserProps } from "../types";
+import useSWR, { SWRConfiguration } from "swr";
+import { z } from "zod";
+import { ExpandedLinkProps, UserProps } from "../types";
+import { getLinksQuerySchemaExtended } from "../zod/schemas/links";
 import useWorkspace from "./use-workspace";
 
-export default function useLinks() {
-  const { id } = useWorkspace();
+const partialQuerySchema = getLinksQuerySchemaExtended.partial();
+
+export default function useLinks(
+  opts: z.infer<typeof partialQuerySchema> = {},
+  swrOpts: SWRConfiguration = {},
+) {
+  const { id: workspaceId } = useWorkspace();
   const { getQueryString } = useRouterStuff();
 
   const [admin, setAdmin] = useState(false);
@@ -17,25 +24,32 @@ export default function useLinks() {
   }, []);
 
   const { data: links, isValidating } = useSWR<
-    (LinkWithTagsProps & {
+    (ExpandedLinkProps & {
       user: UserProps;
     })[]
   >(
-    id
+    workspaceId
       ? `/api/links${getQueryString(
-          { workspaceId: id, includeUser: "true" },
+          {
+            workspaceId,
+            includeUser: "true",
+            includeWebhooks: "true",
+            includeDashboard: "true",
+            ...opts,
+          },
           {
             ignore: ["import", "upgrade", "newLink"],
           },
         )}`
       : admin
-        ? `/api/admin/links${getQueryString()}`
+        ? `/api/admin/links${getQueryString(opts)}`
         : null,
     fetcher,
     {
       dedupingInterval: 20000,
       revalidateOnFocus: false,
       keepPreviousData: true,
+      ...swrOpts,
     },
   );
 

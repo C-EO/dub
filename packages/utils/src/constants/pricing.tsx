@@ -7,7 +7,6 @@ const BUSINESS_PLAN_MODIFIER = ({
   links = 5000,
   clicks = 150000,
   domains = 40,
-  tags = 150,
   users = 15,
   ids = [],
 }: {
@@ -33,9 +32,10 @@ const BUSINESS_PLAN_MODIFIER = ({
     links,
     clicks,
     domains,
-    tags,
+    tags: 1000000000,
     users,
     ai: 1000,
+    api: 3000,
   },
   colors: {
     bg: "bg-sky-900",
@@ -45,7 +45,7 @@ const BUSINESS_PLAN_MODIFIER = ({
     text: "Get started with Business",
     shortText: "Get started",
     href: "https://app.dub.co/register",
-    color: "bg-sky-900 hover:bg-sky-800 hover:ring-sky-100",
+    color: "bg-black hover:bg-gray-800 hover:ring-gray-200",
   },
   featureTitle: "Everything in Pro, plus:",
   features: [
@@ -53,34 +53,34 @@ const BUSINESS_PLAN_MODIFIER = ({
     {
       text: `${nFormatter(clicks)} tracked clicks/mo`,
     },
-    { text: "2-year analytics retention" },
+    { text: "3-year analytics retention" },
     { text: `${domains} custom domains` },
     { text: `${users} users` },
     {
-      text: `Unlimited AI credits`,
+      text: "Unlimited tags",
       footnote: {
         title:
-          "Subject to fair use policy – you will be notified if you exceed the limit, which are high enough for frequent usage.",
+          "Use tags to organize your links and filter by them in your analytics dashboard.",
         cta: "Learn more.",
-        href: "https://dub.co/blog/introducing-dub-ai",
+        href: "https://d.to/tags",
       },
     },
     {
-      text: `${nFormatter(tags, { full: true })} tags`,
-      footnote: {
-        title: "Organize your links with tags.",
-        cta: "Learn more.",
-        href: "https://dub.co/help/article/how-to-use-tags",
-      },
-    },
-    { text: "Elevated support", footnote: "Email and chat support." },
-    {
-      text: "Custom branding",
+      text: "Real-time events stream",
       footnote: {
         title:
-          "Set custom QR code logos, password-protected links logos, and more.",
+          "Get more data on your link clicks and QR code scans with a detailed, real-time stream of events in your workspace",
         cta: "Learn more.",
-        href: "https://dub.co/help/article/custom-qr-codes",
+        href: "https://d.to/events",
+      },
+    },
+    {
+      text: "Event webhooks (beta)",
+      footnote: {
+        title:
+          "Get notified when a link is clicked or a QR code is scanned using webhooks.",
+        cta: "Learn more.",
+        href: "https://d.to/webhooks",
       },
     },
   ],
@@ -101,6 +101,7 @@ export const PLANS = [
       tags: 5,
       users: 1,
       ai: 10,
+      api: 60,
     },
     colors: {
       bg: "bg-black",
@@ -120,10 +121,18 @@ export const PLANS = [
       { text: "30-day analytics retention" },
       { text: "3 custom domains" },
       { text: "1 user" },
+      {
+        text: "Advanced analytics",
+        footnote: {
+          title:
+            "Get location (country, city, continent), device (type, browser, OS), and referer data on your clicks.",
+          cta: "Learn more.",
+          href: "https://dub.co/help/article/dub-analytics",
+        },
+      },
       { text: "10 AI credits/mo" },
       {
-        text: "Community support",
-        footnote: "Help center + GitHub discussions.",
+        text: "Basic support",
       },
       {
         text: "API Access",
@@ -158,6 +167,7 @@ export const PLANS = [
       tags: 25,
       users: 5,
       ai: 1000,
+      api: 600,
     },
     colors: {
       bg: "bg-blue-500",
@@ -167,7 +177,7 @@ export const PLANS = [
       text: "Get started with Pro",
       shortText: "Get started",
       href: "https://app.dub.co/register",
-      color: "bg-blue-500 hover:bg-blue-600 hover:ring-blue-100",
+      color: "bg-blue-600 hover:bg-blue-700 hover:ring-blue-100",
     },
     featureTitle: "Everything in Free, plus:",
     features: [
@@ -179,6 +189,11 @@ export const PLANS = [
       { text: "10 custom domains" },
       { text: "5 users" },
       {
+        text: "Advanced link features",
+        footnote:
+          "Custom social media cards, password-protected links, link expiration, link cloaking, device targeting, geo targeting etc.",
+      },
+      {
         text: "Unlimited AI credits",
         footnote: {
           title:
@@ -187,20 +202,25 @@ export const PLANS = [
           href: "https://dub.co/blog/introducing-dub-ai",
         },
       },
-      { text: "Basic support", footnote: "Basic email support." },
       {
-        text: "Root domain redirect",
+        text: "Priority support",
+      },
+      {
+        text: "Premium dub.link domain",
         footnote: {
-          title:
-            "Redirect vistors that land on the root of your domain (e.g. yourdomain.com) to a page of your choice.",
+          title: "Stand out from the crowd with a premium dub.link domain.",
           cta: "Learn more.",
-          href: "https://dub.co/help/article/how-to-redirect-root-domain",
+          href: "https://dub.co/help/article/default-dub-domains#premium-dublink-domain",
         },
       },
       {
-        text: "Advanced link features",
-        footnote:
-          "Custom social media cards, password-protected links, link expiration, link cloaking, device targeting, geo targeting etc.",
+        text: "Complimentary custom domain",
+        footnote: {
+          title:
+            "All our paid plans come with a free .link custom domain, which helps improve click-through rates.",
+          cta: "Learn more.",
+          href: "https://dub.co/help/article/free-dot-link-domain",
+        },
       },
     ],
   },
@@ -231,7 +251,7 @@ export const PLANS = [
     clicks: 400000,
     domains: 100,
     tags: 300,
-    users: 40,
+    users: 30,
     ids: [
       "price_1OnWu0AlJJEpqkPVWk4144ZG", // monthly (test)
       "price_1OnWu0AlJJEpqkPVkDWVriAB", // yearly (test)
@@ -247,7 +267,7 @@ export const PLANS = [
     clicks: 1000000,
     domains: 250,
     tags: 500,
-    users: 100,
+    users: 50,
     ids: [
       "price_1OnWvCAlJJEpqkPVLzLHx5QD", // monthly (test)
       "price_1OnWvCAlJJEpqkPVHhCCvIOq", // yearly (test)
@@ -263,7 +283,7 @@ export const PLANS = [
     clicks: 2500000,
     domains: 500,
     tags: 1000,
-    users: 250,
+    users: 100,
     ids: [
       "price_1OnWwLAlJJEpqkPVXtJyPqLk", // monthly (test)
       "price_1OnWwLAlJJEpqkPV4eMbOkNh", // yearly (test)
@@ -281,9 +301,13 @@ export const PLANS = [
       yearly: null,
     },
     limits: {
-      links: null,
-      clicks: null,
-      domains: null,
+      links: 250000,
+      clicks: 5000000,
+      domains: 1000,
+      tags: 1000,
+      users: 500,
+      ai: 10000,
+      api: 10000,
     },
     colors: {
       bg: "bg-violet-600",
@@ -292,7 +316,8 @@ export const PLANS = [
     cta: {
       text: "Contact us",
       href: "/enterprise",
-      color: "bg-violet-600 hover:bg-violet-700 hover:ring-violet-100",
+      color:
+        "bg-gradient-to-r from-violet-600 to-pink-600 hover:ring-violet-100",
     },
     featureTitle: "Everything in Business, plus:",
     features: [
@@ -339,7 +364,14 @@ export const getPlanDetails = (plan: string) => {
   )!;
 };
 
-export const getNextPlan = (plan: string) => {
+export const getCurrentPlan = (plan: string) => {
+  return (
+    PLANS.find((p) => p.name.toLowerCase() === plan.toLowerCase()) || FREE_PLAN
+  );
+};
+
+export const getNextPlan = (plan?: string | null) => {
+  if (!plan) return PRO_PLAN;
   return PLANS[
     PLANS.findIndex((p) => p.name.toLowerCase() === plan.toLowerCase()) + 1
   ];

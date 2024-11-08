@@ -1,19 +1,25 @@
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { isStored, storage } from "@/lib/storage";
 import { recordLink } from "@/lib/tinybird";
 import { LinkProps, ProcessedLinkProps } from "@/lib/types";
 import { formatRedisLink, redis } from "@/lib/upstash";
-import { SHORT_DOMAIN, getParamsFromURL, truncate } from "@dub/utils";
+import {
+  R2_URL,
+  getParamsFromURL,
+  linkConstructorSimple,
+  nanoid,
+  truncate,
+} from "@dub/utils";
 import { Prisma } from "@prisma/client";
+import { waitUntil } from "@vercel/functions";
+import { createId } from "../utils";
 import { combineTagIds, transformLink } from "./utils";
 
 export async function updateLink({
-  oldDomain = SHORT_DOMAIN,
-  oldKey,
+  oldLink,
   updatedLink,
 }: {
-  oldDomain?: string;
-  oldKey: string;
+  oldLink: { domain: string; key: string; image?: string | null };
   updatedLink: ProcessedLinkProps &
     Pick<LinkProps, "id" | "clicks" | "lastClicked" | "updatedAt">;
 }) {
@@ -28,9 +34,10 @@ export async function updateLink({
     image,
     proxy,
     geo,
+    publicStats,
   } = updatedLink;
-  const changedKey = key.toLowerCase() !== oldKey.toLowerCase();
-  const changedDomain = domain !== oldDomain;
+  const changedKey = key.toLowerCase() !== oldLink.key.toLowerCase();
+  const changedDomain = domain !== oldLink.domain;
 
   const { utm_source, utm_medium, utm_campaign, utm_term, utm_content } =
     getParamsFromURL(url);
@@ -44,18 +51,13 @@ export async function updateLink({
     tagId,
     tagIds,
     tagNames,
+    webhookIds,
     ...rest
   } = updatedLink;
 
   const combinedTagIds = combineTagIds({ tagId, tagIds });
 
-  if (proxy && image && !isStored(image)) {
-    // only upload image if proxy is true and image is not stored in R2
-    await storage.upload(`images/${id}`, image, {
-      width: 1200,
-      height: 630,
-    });
-  }
+  const imageUrlNonce = nanoid(7);
 
   const response = await prisma.link.update({
     where: {
@@ -64,17 +66,21 @@ export async function updateLink({
     data: {
       ...rest,
       key,
+      shortLink: linkConstructorSimple({
+        domain: updatedLink.domain,
+        key: updatedLink.key,
+      }),
       title: truncate(title, 120),
       description: truncate(description, 240),
       image:
         proxy && image && !isStored(image)
-          ? `${process.env.STORAGE_BASE_URL}/images/${id}`
+          ? `${R2_URL}/images/${id}_${imageUrlNonce}`
           : image,
-      utm_source,
-      utm_medium,
-      utm_campaign,
-      utm_term,
-      utm_content,
+      utm_source: utm_source || null,
+      utm_medium: utm_medium || null,
+      utm_campaign: utm_campaign || null,
+      utm_term: utm_term || null,
+      utm_content: utm_content || null,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
       geo: geo || Prisma.JsonNull,
 
@@ -83,13 +89,14 @@ export async function updateLink({
         updatedLink.projectId && {
           tags: {
             deleteMany: {},
-            create: tagNames.map((tagName) => ({
+            create: tagNames.map((tagName, idx) => ({
               tag: {
                 connect: {
                   name_projectId: {
                     name: tagName,
                     projectId: updatedLink.projectId as string,
                   },
+                  createdAt: new Date(new Date().getTime() + idx * 100), // increment by 100ms for correct order
                 },
               },
             })),
@@ -100,9 +107,34 @@ export async function updateLink({
       ...(combinedTagIds && {
         tags: {
           deleteMany: {},
-          create: combinedTagIds.map((tagId) => ({
+          create: combinedTagIds.map((tagId, idx) => ({
             tagId,
+            createdAt: new Date(new Date().getTime() + idx * 100), // increment by 100ms for correct order
           })),
+        },
+      }),
+
+      // Webhooks
+      ...(webhookIds && {
+        webhooks: {
+          deleteMany: {},
+          createMany: {
+            data: webhookIds.map((webhookId) => ({
+              webhookId,
+            })),
+          },
+        },
+      }),
+
+      // Shared dashboard
+      ...(publicStats && {
+        dashboard: {
+          create: {
+            id: createId({ prefix: "dash_" }),
+            showConversions: updatedLink.trackConversion,
+            projectId: updatedLink.projectId,
+            userId: updatedLink.userId,
+          },
         },
       }),
     },
@@ -117,28 +149,48 @@ export async function updateLink({
             },
           },
         },
+        orderBy: {
+          createdAt: "asc",
+        },
       },
+      webhooks: webhookIds ? true : false,
     },
   });
 
-  await Promise.all([
-    // record link in Redis
-    redis.hset(updatedLink.domain.toLowerCase(), {
-      [updatedLink.key.toLowerCase()]: await formatRedisLink(response),
-    }),
-    // record link in Tinybird
-    recordLink({
-      link: {
-        ...response,
-        tags: response.tags.map(({ tag }) => ({
-          tagId: tag.id,
-        })),
-      },
-    }),
-    // if key is changed: delete the old key in Redis
-    (changedDomain || changedKey) &&
-      redis.hdel(oldDomain.toLowerCase(), oldKey.toLowerCase()),
-  ]);
+  waitUntil(
+    Promise.all([
+      // record link in Redis
+      redis.hset(updatedLink.domain.toLowerCase(), {
+        [updatedLink.key.toLowerCase()]: await formatRedisLink(response),
+      }),
+      // record link in Tinybird
+      recordLink({
+        link_id: response.id,
+        domain: response.domain,
+        key: response.key,
+        url: response.url,
+        tag_ids: response.tags.map(({ tag }) => tag.id),
+        workspace_id: response.projectId,
+        created_at: response.createdAt,
+      }),
+      // if key is changed: delete the old key in Redis
+      (changedDomain || changedKey) &&
+        redis.hdel(oldLink.domain.toLowerCase(), oldLink.key.toLowerCase()),
+      // if proxy is true and image is not stored in R2, upload image to R2
+      proxy &&
+        image &&
+        !isStored(image) &&
+        storage.upload(`images/${id}_${imageUrlNonce}`, image, {
+          width: 1200,
+          height: 630,
+        }),
+      // if there's a valid old image and it starts with the same link ID but is different from the new image, delete it
+      oldLink.image &&
+        oldLink.image.startsWith(`${R2_URL}/images/${id}`) &&
+        oldLink.image !== image &&
+        storage.delete(oldLink.image.replace(`${R2_URL}/`, "")),
+    ]),
+  );
 
   return transformLink(response);
 }

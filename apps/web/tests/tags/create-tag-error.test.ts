@@ -17,7 +17,7 @@ const cases = [
           message:
             "invalid_enum_value: color: Invalid color. Must be one of: red, yellow, green, blue, purple, pink, brown",
           doc_url:
-            "https://dub.co/docs/api-reference/errors#unprocessable_entity",
+            "https://dub.co/docs/api-reference/errors#unprocessable-entity",
         },
       },
     },
@@ -32,9 +32,9 @@ const cases = [
       data: {
         error: {
           code: "unprocessable_entity",
-          message: "invalid_type: tag: Required",
+          message: "custom: name: Name is required.",
           doc_url:
-            "https://dub.co/docs/api-reference/errors#unprocessable_entity",
+            "https://dub.co/docs/api-reference/errors#unprocessable-entity",
         },
       },
     },
@@ -44,12 +44,10 @@ const cases = [
 cases.forEach(({ name, body, expected }) => {
   test(name, async (ctx) => {
     const h = new IntegrationHarness(ctx);
-    const { workspace, http } = await h.init();
-    const { workspaceId } = workspace;
+    const { http } = await h.init();
 
     const response = await http.post<Tag>({
       path: "/tags",
-      query: { workspaceId },
       body,
     });
 
@@ -59,12 +57,10 @@ cases.forEach(({ name, body, expected }) => {
 
 test("create tag with existing name", async (ctx) => {
   const h = new IntegrationHarness(ctx);
-  const { workspace, http } = await h.init();
-  const { workspaceId } = workspace;
+  const { http } = await h.init();
 
   await http.post({
     path: "/tags",
-    query: { workspaceId },
     body: {
       tag: "news",
       color: "red",
@@ -74,7 +70,6 @@ test("create tag with existing name", async (ctx) => {
   // Create the same tag again
   const { status, data: error } = await http.post<Tag>({
     path: "/tags",
-    query: { workspaceId },
     body: {
       tag: "news",
       color: "red",

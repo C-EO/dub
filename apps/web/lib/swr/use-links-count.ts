@@ -2,14 +2,16 @@ import { useRouterStuff } from "@dub/ui";
 import { fetcher } from "@dub/utils";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
+import z from "../zod";
+import { getLinksCountQuerySchema } from "../zod/schemas/links";
 import useWorkspace from "./use-workspace";
 
-export default function useLinksCount({
-  groupBy,
-}: {
-  groupBy?: "domain" | "tagId";
-} = {}) {
-  const { id } = useWorkspace();
+const partialQuerySchema = getLinksCountQuerySchema.partial();
+
+export default function useLinksCount<T = any>(
+  opts: z.infer<typeof partialQuerySchema> & { ignoreParams?: boolean } = {},
+) {
+  const { id: workspaceId } = useWorkspace();
   const { getQueryString } = useRouterStuff();
 
   const [admin, setAdmin] = useState(false);
@@ -20,31 +22,35 @@ export default function useLinksCount({
   }, []);
 
   const { data, error } = useSWR<any>(
-    id
-      ? `/api/links/count${getQueryString(
-          {
-            workspaceId: id,
-            ...(groupBy && { groupBy }),
-          },
-          {
-            ignore: ["import", "upgrade", "newLink"],
-          },
-        )}`
+    workspaceId
+      ? `/api/links/count${
+          opts.ignoreParams
+            ? `?workspaceId=${workspaceId}`
+            : getQueryString(
+                {
+                  workspaceId,
+                  ...opts,
+                },
+                {
+                  ignore: ["import", "upgrade", "newLink"],
+                },
+              )
+        }`
       : admin
         ? `/api/admin/links/count${getQueryString({
-            ...(groupBy && { groupBy }),
+            ...opts,
           })}`
         : null,
     fetcher,
     {
-      dedupingInterval: 30000,
+      dedupingInterval: 60000,
       keepPreviousData: true,
     },
   );
 
   return {
-    data,
-    loading: !error && !data,
+    data: data as T,
+    loading: !error && data === undefined,
     error,
   };
 }

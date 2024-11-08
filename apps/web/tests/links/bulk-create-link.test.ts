@@ -1,18 +1,18 @@
 import z from "@/lib/zod";
-import { LinkSchema } from "@/lib/zod/schemas";
+import { LinkSchema } from "@/lib/zod/schemas/links";
 import { Link } from "@prisma/client";
 import { expect, test } from "vitest";
 import { randomId } from "../utils/helpers";
 import { IntegrationHarness } from "../utils/integration";
-import { link } from "../utils/resource";
+import { E2E_LINK } from "../utils/resource";
 import { expectedLink } from "../utils/schema";
 
-const { domain } = link;
+const { domain } = E2E_LINK;
 
 test("POST /links/bulk", async (ctx) => {
   const h = new IntegrationHarness(ctx);
   const { workspace, http, user } = await h.init();
-  const { workspaceId } = workspace;
+  const workspaceId = workspace.id;
   const projectId = workspaceId.replace("ws_", "");
 
   const bulkLinks = Array.from({ length: 2 }, () => ({
@@ -22,7 +22,6 @@ test("POST /links/bulk", async (ctx) => {
 
   const { status, data: links } = await http.post<Link[]>({
     path: "/links/bulk",
-    query: { workspaceId },
     body: bulkLinks,
   });
 
@@ -39,7 +38,6 @@ test("POST /links/bulk", async (ctx) => {
     workspaceId,
     shortLink: `https://${domain}/${firstLink?.key}`,
     qrCode: `https://api.dub.co/qr?url=https://${domain}/${firstLink?.key}?qr=1`,
-    tags: [],
   });
   expect(secondLink).toStrictEqual({
     ...expectedLink,
@@ -49,7 +47,6 @@ test("POST /links/bulk", async (ctx) => {
     workspaceId,
     shortLink: `https://${domain}/${secondLink?.key}`,
     qrCode: `https://api.dub.co/qr?url=https://${domain}/${secondLink?.key}?qr=1`,
-    tags: [],
   });
   expect(z.array(LinkSchema.strict()).parse(links)).toBeTruthy();
 

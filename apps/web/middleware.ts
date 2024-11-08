@@ -1,8 +1,10 @@
 import {
+  AdminMiddleware,
   ApiMiddleware,
   AppMiddleware,
+  AxiomMiddleware,
+  CreateLinkMiddleware,
   LinkMiddleware,
-  RootMiddleware,
 } from "@/lib/middleware";
 import { parse } from "@/lib/middleware/utils";
 import {
@@ -10,9 +12,11 @@ import {
   API_HOSTNAMES,
   APP_HOSTNAMES,
   DEFAULT_REDIRECTS,
+  isValidUrl,
 } from "@dub/utils";
+import { PARTNERS_HOSTNAMES } from "@dub/utils/src/constants";
 import { NextFetchEvent, NextRequest, NextResponse } from "next/server";
-import AdminMiddleware from "./lib/middleware/admin";
+import PartnersMiddleware from "./lib/middleware/partners";
 
 export const config = {
   matcher: [
@@ -20,17 +24,17 @@ export const config = {
      * Match all paths except for:
      * 1. /api/ routes
      * 2. /_next/ (Next.js internals)
-     * 3. /_proxy/ (special page for OG tags proxying)
-     * 4. /_static (inside /public)
-     * 5. /_vercel (Vercel internals)
-     * 6. Static files (e.g. /favicon.ico, /sitemap.xml, /robots.txt, etc.)
+     * 3. /_proxy/ (proxies for third-party services)
+     * 4. Metadata files: favicon.ico, sitemap.xml, robots.txt, manifest.webmanifest, .well-known
      */
-    "/((?!api/|_next/|_proxy/|_static|_vercel|[\\w-]+\\.\\w+).*)",
+    "/((?!api/|_next/|_proxy/|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|.well-known).*)",
   ],
 };
 
 export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
-  const { domain, path, key } = parse(req);
+  const { domain, path, key, fullKey } = parse(req);
+
+  AxiomMiddleware(req, ev);
 
   // for App
   if (APP_HOSTNAMES.has(domain)) {
@@ -57,9 +61,12 @@ export default async function middleware(req: NextRequest, ev: NextFetchEvent) {
     return AdminMiddleware(req);
   }
 
-  // for root pages (e.g. dub.sh, chatg.pt, etc.)
-  if (key.length === 0) {
-    return RootMiddleware(req, ev);
+  if (PARTNERS_HOSTNAMES.has(domain)) {
+    return PartnersMiddleware(req);
+  }
+
+  if (isValidUrl(fullKey)) {
+    return CreateLinkMiddleware(req);
   }
 
   return LinkMiddleware(req, ev);

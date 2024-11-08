@@ -1,5 +1,5 @@
 import { hashToken, withAdmin } from "@/lib/auth";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
 import { DUB_DOMAINS_ARRAY } from "@dub/utils";
 import { randomBytes } from "crypto";
 import { NextResponse } from "next/server";
@@ -37,6 +37,7 @@ export const POST = withAdmin(async ({ req }) => {
         select: {
           project: {
             select: {
+              id: true,
               name: true,
               slug: true,
               plan: true,
@@ -74,6 +75,7 @@ export const POST = withAdmin(async ({ req }) => {
     ),
     workspaces: response.projects.map(({ project }) => ({
       ...project,
+      id: `ws_${project.id}`,
       clicks: project.usage,
       domains: project._count.domains,
       links: project._count.links,
@@ -90,7 +92,7 @@ async function getImpersonateUrl(email: string) {
   await prisma.verificationToken.create({
     data: {
       identifier: email,
-      token: hashToken(token),
+      token: await hashToken(token, { secret: true }),
       expires: new Date(Date.now() + 60000),
     },
   });

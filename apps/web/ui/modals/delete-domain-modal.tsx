@@ -1,6 +1,6 @@
 import useWorkspace from "@/lib/swr/use-workspace";
 import { DomainProps } from "@/lib/types";
-import { Button, Modal, useMediaQuery } from "@dub/ui";
+import { Button, LinkLogo, Modal, useMediaQuery } from "@dub/ui";
 import {
   Dispatch,
   SetStateAction,
@@ -10,7 +10,6 @@ import {
 } from "react";
 import { toast } from "sonner";
 import { mutate } from "swr";
-import LinkLogo from "../links/link-logo";
 
 function DeleteDomainModal({
   showDeleteDomainModal,
@@ -35,11 +34,21 @@ function DeleteDomainModal({
       <div className="flex flex-col items-center justify-center space-y-3 border-b border-gray-200 px-4 py-4 pt-8 text-center sm:px-16">
         <LinkLogo apexDomain={domain} />
         <h3 className="text-lg font-medium">Delete {domain}</h3>
-        <p className="text-sm text-gray-500">
-          Warning: Deleting this domain will delete all associated links as well
-          as their anaytics, permanently. This action cannot be undone – proceed
-          with caution.
-        </p>
+        <div className="space-y-2 text-sm text-gray-500">
+          <p>
+            Deleting this domain will delete all associated links as well as
+            their anaytics, permanently.
+          </p>
+          {Boolean(props.registeredDomain) && (
+            <p>The domain will also be provisioned back to Dub.</p>
+          )}
+          <p>
+            <strong className="font-semibold text-gray-700">
+              This action can't be undone
+            </strong>{" "}
+            – proceed with caution.
+          </p>
+        </div>
       </div>
 
       <form
@@ -50,11 +59,17 @@ function DeleteDomainModal({
             method: "DELETE",
           }).then(async (res) => {
             if (res.status === 200) {
-              await mutate(`/api/domains?workspaceId=${id}`);
+              await mutate(
+                (key) =>
+                  typeof key === "string" && key.startsWith("/api/domains"),
+                undefined,
+                { revalidate: true },
+              );
               setShowDeleteDomainModal(false);
               toast.success("Successfully deleted domain!");
             } else {
-              toast.error("Something went wrong. Please try again.");
+              const { error } = await res.json();
+              toast.error(error.message);
             }
             setDeleting(false);
           });

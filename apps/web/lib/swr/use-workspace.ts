@@ -7,7 +7,7 @@ export default function useWorkspace() {
   let { slug } = useParams() as { slug: string | null };
   const searchParams = useSearchParams();
   if (!slug) {
-    slug = searchParams.get("slug");
+    slug = searchParams.get("slug") || searchParams.get("workspace");
   }
 
   const {
@@ -15,12 +15,13 @@ export default function useWorkspace() {
     error,
     mutate,
   } = useSWR<WorkspaceProps>(slug && `/api/workspaces/${slug}`, fetcher, {
-    dedupingInterval: 30000,
+    dedupingInterval: 60000,
   });
 
   return {
     ...workspace,
     nextPlan: workspace?.plan ? getNextPlan(workspace.plan) : PRO_PLAN,
+    role: (workspace?.users && workspace.users[0].role) || "member",
     isOwner: workspace?.users && workspace.users[0].role === "owner",
     exceededClicks: workspace && workspace.usage >= workspace.usageLimit,
     exceededLinks: workspace && workspace.linksUsage >= workspace.linksLimit,

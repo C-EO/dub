@@ -26,6 +26,11 @@ const config: Config = {
       fontFamily: {
         display: ["var(--font-satoshi)", "system-ui", "sans-serif"],
         default: ["var(--font-inter)", "system-ui", "sans-serif"],
+        mono: [
+          "var(--font-geist-mono, ui-monospace)",
+          "ui-monospace",
+          "monospace",
+        ],
       },
       animation: {
         // Modal
@@ -37,11 +42,14 @@ const config: Config = {
           "slide-right-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         "slide-down-fade": "slide-down-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
         "slide-left-fade": "slide-left-fade 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+        // Sheet
+        "slide-in-from-right": "slide-in-from-right 0.2s ease",
+        "slide-out-to-right": "slide-out-to-right 0.2s ease",
         // Navigation menu
-        "enter-from-right": "enter-from-right 0.25s ease",
-        "enter-from-left": "enter-from-left 0.25s ease",
-        "exit-to-right": "exit-to-right 0.25s ease",
-        "exit-to-left": "exit-to-left 0.25s ease",
+        "enter-from-right": "enter-from-right 0.15s ease",
+        "enter-from-left": "enter-from-left 0.15s ease",
+        "exit-to-right": "exit-to-right 0.15s ease",
+        "exit-to-left": "exit-to-left 0.15s ease",
         "scale-in-content": "scale-in-content 0.2s ease",
         "scale-out-content": "scale-out-content 0.2s ease",
         // Accordion
@@ -53,6 +61,8 @@ const config: Config = {
         spinner: "spinner 1.2s linear infinite",
         // Custom blink animation (for loading-dots)
         blink: "blink 1.4s infinite both",
+        // Custom pulse animation
+        pulse: "pulse 1s linear infinite alternate",
       },
       keyframes: {
         // Modal
@@ -66,20 +76,29 @@ const config: Config = {
         },
         // Popover, Tooltip
         "slide-up-fade": {
-          "0%": { opacity: "0", transform: "translateY(2px)" },
+          "0%": { opacity: "0", transform: "translateY(var(--offset, 2px))" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "slide-right-fade": {
-          "0%": { opacity: "0", transform: "translateX(-2px)" },
+          "0%": { opacity: "0", transform: "translateX(var(--offset, -2px))" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
         "slide-down-fade": {
-          "0%": { opacity: "0", transform: "translateY(-2px)" },
+          "0%": { opacity: "0", transform: "translateY(var(--offset, -2px))" },
           "100%": { opacity: "1", transform: "translateY(0)" },
         },
         "slide-left-fade": {
-          "0%": { opacity: "0", transform: "translateX(2px)" },
+          "0%": { opacity: "0", transform: "translateX(var(--offset, 2px))" },
           "100%": { opacity: "1", transform: "translateX(0)" },
+        },
+        // Sheet
+        "slide-in-from-right": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "slide-out-to-right": {
+          "0%": { transform: "translateX(0)" },
+          "100%": { transform: "translateX(100%)" },
         },
         // Navigation menu
         "enter-from-right": {
@@ -148,6 +167,15 @@ const config: Config = {
             opacity: "0.2",
           },
         },
+        // Custom pulse animation
+        pulse: {
+          from: {
+            opacity: "0",
+          },
+          to: {
+            opacity: "1",
+          },
+        },
       },
       colors: {
         brown: {
@@ -162,6 +190,9 @@ const config: Config = {
           800: "#846358",
           900: "#43302b",
         },
+      },
+      dropShadow: {
+        "card-hover": ["0 8px 12px #222A350d", "0 32px 80px #2f30370f"],
       },
     },
   },

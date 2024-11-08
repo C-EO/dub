@@ -35,7 +35,7 @@ Dub.co is the open-source link management infrastructure for modern marketing te
 
 ## Features
 
-- [Advanced Analytics](https://dub.co/features/analytics)
+- [Advanced Analytics](https://dub.co/help/article/dub-analytics)
 - [Branded Links](https://dub.co/features/branded-links)
 - [QR Codes](https://dub.co/features/qr-codes)
 - [Personalization](https://dub.co/features/personalization)
@@ -53,8 +53,9 @@ Dub.co is the open-source link management infrastructure for modern marketing te
 - [BoxyHQ](https://boxyhq.com/enterprise-sso) – SSO/SAML
 - [Turborepo](https://turbo.build/repo) – monorepo
 - [Stripe](https://stripe.com/) – payments
-- [Postmark](https://postmarkapp.com/) – emails
+- [Resend](https://resend.com/) – emails
 - [Vercel](https://vercel.com/) – deployments
+- [Pangea](https://pangea.cloud/services/domain-intel/reputation) - link scanning
 
 ## Self-Hosting
 

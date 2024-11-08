@@ -2,8 +2,9 @@
 
 import { cn } from "@dub/utils";
 import * as Dialog from "@radix-ui/react-dialog";
+import * as VisuallyHidden from "@radix-ui/react-visually-hidden";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction } from "react";
+import { ComponentProps, Dispatch, SetStateAction } from "react";
 import { Drawer } from "vaul";
 import { useMediaQuery } from "./hooks";
 
@@ -15,6 +16,7 @@ export function Modal({
   onClose,
   desktopOnly,
   preventDefaultClose,
+  drawerRootProps,
 }: {
   children: React.ReactNode;
   className?: string;
@@ -23,6 +25,7 @@ export function Modal({
   onClose?: () => void;
   desktopOnly?: boolean;
   preventDefaultClose?: boolean;
+  drawerRootProps?: ComponentProps<typeof Drawer.Root>;
 }) {
   const router = useRouter();
 
@@ -52,19 +55,25 @@ export function Modal({
             closeModal({ dragged: true });
           }
         }}
+        {...drawerRootProps}
       >
-        <Drawer.Overlay className="fixed inset-0 z-40 bg-gray-100 bg-opacity-10 backdrop-blur" />
         <Drawer.Portal>
+          <Drawer.Overlay className="fixed inset-0 z-50 bg-gray-100 bg-opacity-10 backdrop-blur" />
           <Drawer.Content
             className={cn(
-              "fixed bottom-0 left-0 right-0 z-50 mt-24 rounded-t-[10px] border-t border-gray-200 bg-white",
+              "fixed bottom-0 left-0 right-0 z-50 flex flex-col",
+              "rounded-t-[10px] border-t border-gray-200 bg-white",
               className,
             )}
           >
-            <div className="sticky top-0 z-20 flex w-full items-center justify-center rounded-t-[10px] bg-inherit">
-              <div className="my-3 h-1 w-12 rounded-full bg-gray-300" />
+            <div className="scrollbar-hide flex-1 overflow-y-auto rounded-t-[10px] bg-inherit">
+              <VisuallyHidden.Root>
+                <Drawer.Title>Modal</Drawer.Title>
+                <Drawer.Description>This is a modal</Drawer.Description>
+              </VisuallyHidden.Root>
+              <DrawerIsland />
+              {children}
             </div>
-            {children}
           </Drawer.Content>
           <Drawer.Overlay />
         </Drawer.Portal>
@@ -91,13 +100,27 @@ export function Modal({
           onOpenAutoFocus={(e) => e.preventDefault()}
           onCloseAutoFocus={(e) => e.preventDefault()}
           className={cn(
-            "animate-scale-in fixed inset-0 z-40 m-auto max-h-fit w-full max-w-md overflow-hidden border border-gray-200 bg-white p-0 shadow-xl sm:rounded-2xl",
+            "fixed inset-0 z-40 m-auto h-fit w-full max-w-md",
+            "border border-gray-200 bg-white p-0 shadow-xl sm:rounded-2xl",
+            "scrollbar-hide animate-scale-in overflow-y-auto",
             className,
           )}
         >
+          <VisuallyHidden.Root>
+            <Dialog.Title>Modal</Dialog.Title>
+            <Dialog.Description>This is a modal</Dialog.Description>
+          </VisuallyHidden.Root>
           {children}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  );
+}
+
+function DrawerIsland() {
+  return (
+    <div className="sticky top-0 z-20 flex items-center justify-center rounded-t-[10px] bg-inherit">
+      <div className="my-3 h-1 w-12 rounded-full bg-gray-300" />
+    </div>
   );
 }

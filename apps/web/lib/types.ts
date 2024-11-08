@@ -1,13 +1,33 @@
 import z from "@/lib/zod";
 import { metaTagsSchema } from "@/lib/zod/schemas/metatags";
 import { DirectorySyncProviders } from "@boxyhq/saml-jackson";
-import { Link } from "@prisma/client";
+import { Link, Project, UtmTemplate, Webhook } from "@prisma/client";
+import { WEBHOOK_TRIGGER_DESCRIPTIONS } from "./webhook/constants";
+import { trackCustomerResponseSchema } from "./zod/schemas/customers";
+import { integrationSchema } from "./zod/schemas/integration";
+import { trackLeadResponseSchema } from "./zod/schemas/leads";
 import { createLinkBodySchema } from "./zod/schemas/links";
+import { createOAuthAppSchema, oAuthAppSchema } from "./zod/schemas/oauth";
+import {
+  PartnerSchema,
+  ProgramEnrollmentSchema,
+  ProgramSchema,
+} from "./zod/schemas/partners";
+import { trackSaleResponseSchema } from "./zod/schemas/sales";
+import { tokenSchema } from "./zod/schemas/token";
+import { usageResponse } from "./zod/schemas/usage";
+import {
+  createWebhookSchema,
+  webhookEventSchemaTB,
+  webhookSchema,
+} from "./zod/schemas/webhooks";
 
 export type LinkProps = Link;
 
-export interface LinkWithTagsProps extends LinkProps {
+export interface ExpandedLinkProps extends LinkProps {
   tags: TagProps[];
+  webhookIds: string[];
+  dashboardId: string | null;
 }
 
 export interface SimpleLinkProps {
@@ -24,7 +44,8 @@ export interface QRLinkProps {
 
 export interface RedisLinkProps {
   id: string;
-  url: string;
+  url?: string;
+  trackConversion?: boolean;
   password?: boolean;
   proxy?: boolean;
   rewrite?: boolean;
@@ -34,23 +55,9 @@ export interface RedisLinkProps {
   ios?: string;
   android?: string;
   geo?: object;
+  doIndex?: boolean;
   projectId?: string;
-}
-
-export interface EdgeLinkProps {
-  id: string;
-  domain: string;
-  key: string;
-  url: string;
-  proxy: boolean;
-  title: string;
-  description: string;
-  image: string;
-  password: string;
-  clicks: number;
-  publicStats: boolean;
-  userId: string;
-  projectId: string;
+  webhookIds?: string[];
 }
 
 export interface TagProps {
@@ -61,40 +68,37 @@ export interface TagProps {
 
 export type TagColorProps = (typeof tagColors)[number];
 
+export type UtmTemplateProps = UtmTemplate;
+export type UtmTemplateWithUserProps = UtmTemplateProps & {
+  user?: UserProps;
+};
+
 export type PlanProps = (typeof plans)[number];
 
 export type RoleProps = (typeof roles)[number];
 
-export interface WorkspaceProps {
-  id: string;
-  name: string;
-  slug: string;
+export type BetaFeatures = "referrals" | "webhooks" | "noDubLink";
+
+export type AddOns = "conversion" | "sso";
+
+export interface WorkspaceProps extends Project {
   logo: string | null;
-  usage: number;
-  usageLimit: number;
-  aiUsage: number;
-  aiLimit: number;
-  linksUsage: number;
-  linksLimit: number;
-  domainsLimit: number;
-  tagsLimit: number;
-  usersLimit: number;
   plan: PlanProps;
-  stripeId: string | null;
-  billingCycleStart: number;
-  createdAt: Date;
   domains: {
+    id: string;
     slug: string;
     primary: boolean;
+    verified: boolean;
   }[];
   users: {
     role: RoleProps;
   }[];
-  metadata?: {
-    defaultDomains?: string[];
+  flags?: {
+    [key in BetaFeatures]: boolean;
   };
-  inviteCode: string;
 }
+
+export type WorkspaceWithUsers = Omit<WorkspaceProps, "domains">;
 
 export interface UserProps {
   id: string;
@@ -103,7 +107,10 @@ export interface UserProps {
   image?: string;
   createdAt: Date;
   source: string | null;
-  migratedWorkspace: string | null;
+  defaultWorkspace?: string;
+  isMachine: boolean;
+  hasPassword: boolean;
+  provider: string | null;
 }
 
 export interface WorkspaceUserProps extends UserProps {
@@ -124,20 +131,18 @@ export interface DomainProps {
   verified: boolean;
   primary: boolean;
   archived: boolean;
-  publicStats: boolean;
-  target?: string;
-  type: string;
   placeholder?: string;
-  clicks: number;
-  projectId: string;
   expiredUrl?: string;
-}
-export interface RedisDomainProps {
-  id: string;
-  url?: string;
-  rewrite?: boolean;
-  iframeable?: boolean;
+  notFoundUrl?: string;
   projectId: string;
+  link?: LinkProps;
+  registeredDomain?: RegisteredDomainProps;
+}
+
+export interface RegisteredDomainProps {
+  id: string;
+  createdAt: Date;
+  expiresAt: Date;
 }
 
 export interface BitlyGroupProps {
@@ -168,7 +173,10 @@ export type NewLinkProps = z.infer<typeof createLinkBodySchema>;
 
 type ProcessedLinkOverrides = "domain" | "key" | "url" | "projectId";
 export type ProcessedLinkProps = Omit<NewLinkProps, ProcessedLinkOverrides> &
-  Pick<LinkProps, ProcessedLinkOverrides> & { userId?: LinkProps["userId"] };
+  Pick<LinkProps, ProcessedLinkOverrides> & { userId?: LinkProps["userId"] } & {
+    createdAt?: Date;
+    id?: string;
+  };
 
 export const plans = [
   "free",
@@ -182,6 +190,8 @@ export const plans = [
 
 export const roles = ["owner", "member"] as const;
 
+export type Role = (typeof roles)[number];
+
 export const tagColors = [
   "red",
   "yellow",
@@ -193,3 +203,82 @@ export const tagColors = [
 ] as const;
 
 export type MetaTag = z.infer<typeof metaTagsSchema>;
+
+export type TokenProps = z.infer<typeof tokenSchema>;
+
+export type OAuthAppProps = z.infer<typeof oAuthAppSchema>;
+
+export type NewOAuthApp = z.infer<typeof createOAuthAppSchema>;
+
+export type ExistingOAuthApp = OAuthAppProps;
+
+export type IntegrationProps = z.infer<typeof integrationSchema>;
+
+export type NewOrExistingIntegration = Omit<
+  IntegrationProps,
+  "id" | "verified" | "installations"
+> & {
+  id?: string;
+};
+
+export type InstalledIntegrationProps = Pick<
+  IntegrationProps,
+  "id" | "slug" | "logo" | "name" | "developer" | "description" | "verified"
+> & {
+  installations: number;
+  installed?: boolean;
+};
+
+export type InstalledIntegrationInfoProps = Pick<
+  IntegrationProps,
+  | "id"
+  | "slug"
+  | "logo"
+  | "name"
+  | "developer"
+  | "description"
+  | "verified"
+  | "readme"
+  | "website"
+  | "screenshots"
+  | "installUrl"
+> & {
+  createdAt: Date;
+  installations: number;
+  installed: {
+    id: string;
+    createdAt: Date;
+    by: {
+      id: string;
+      name: string | null;
+      image: string | null;
+    };
+  } | null;
+};
+
+export type WebhookTrigger = keyof typeof WEBHOOK_TRIGGER_DESCRIPTIONS;
+
+export type WebhookProps = z.infer<typeof webhookSchema>;
+
+export type NewWebhook = z.infer<typeof createWebhookSchema>;
+
+export type WebhookEventProps = z.infer<typeof webhookEventSchemaTB>;
+
+export type WebhookCacheProps = Pick<
+  Webhook,
+  "id" | "url" | "secret" | "triggers"
+>;
+
+export type TrackCustomerResponse = z.infer<typeof trackCustomerResponseSchema>;
+
+export type TrackLeadResponse = z.infer<typeof trackLeadResponseSchema>;
+
+export type TrackSaleResponse = z.infer<typeof trackSaleResponseSchema>;
+
+export type UsageResponse = z.infer<typeof usageResponse>;
+
+export type PartnerProps = z.infer<typeof PartnerSchema>;
+
+export type ProgramProps = z.infer<typeof ProgramSchema>;
+
+export type ProgramEnrollmentProps = z.infer<typeof ProgramEnrollmentSchema>;

@@ -5,12 +5,22 @@ SCHEMA >
     `click_id` String,
     `link_id` String,
     `url` String,
+    `continent` LowCardinality(String),
     `country` LowCardinality(String),
     `city` String,
+    `region` String,
+    `latitude` String,
+    `longitude` String,
     `device` LowCardinality(String),
     `browser` LowCardinality(String),
     `os` LowCardinality(String),
-    `referer` String
+    `engine` LowCardinality(String),
+    `ua` String,
+    `identity_hash` String,
+    `referer` String,
+    `referer_url` String,
+    `qr` UInt8,
+    `ip` String
 
 ENGINE "MergeTree"
 ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"

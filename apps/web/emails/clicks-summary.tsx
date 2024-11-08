@@ -1,4 +1,4 @@
-import { DUB_LOGO, nFormatter, truncate } from "@dub/utils";
+import { DUB_WORDMARK, nFormatter, smartTruncate } from "@dub/utils";
 import {
   Body,
   Column,
@@ -28,15 +28,15 @@ export default function ClicksSummary({
   createdLinks = 25,
   topLinks = [
     {
-      link: "acme.com/sales",
-      clicks: 2187,
-    },
-    {
-      link: "acme.com/instagram",
+      link: "acmesuperlongdomain.com/insta",
       clicks: 1820,
     },
     {
-      link: "acme.com/facebook",
+      link: "acmesuperlongdomain.com/super-long-path-that-is-way-too-long-and-should-be-truncated",
+      clicks: 2187,
+    },
+    {
+      link: "getacme.link",
       clicks: 1552,
     },
     {
@@ -44,7 +44,7 @@ export default function ClicksSummary({
       clicks: 1229,
     },
     {
-      link: "acme.com/linkedin",
+      link: "acme.com/linkedin/more/path",
       clicks: 1055,
     },
   ],
@@ -61,6 +61,8 @@ export default function ClicksSummary({
     clicks: number;
   }[];
 }) {
+  const notificationSettingsUrl = `https://app.${appDomain}/${workspaceSlug}/settings/notifications`;
+
   return (
     <Html>
       <Head />
@@ -72,8 +74,7 @@ export default function ClicksSummary({
           <Container className="mx-auto my-10 max-w-[500px] rounded border border-solid border-gray-200 px-10 py-5">
             <Section className="mt-8">
               <Img
-                src={DUB_LOGO}
-                width="40"
+                src={DUB_WORDMARK}
                 height="40"
                 alt={appName}
                 className="mx-auto my-0"
@@ -123,21 +124,33 @@ export default function ClicksSummary({
                       Clicks
                     </Column>
                   </Row>
-                  {topLinks.map(({ link, clicks }, index) => (
-                    <div key={index}>
-                      <Row>
-                        <Column align="left" className="text-sm font-medium">
-                          {truncate(link, 30)}
-                        </Column>
-                        <Column align="right" className="text-sm text-gray-600">
-                          {nFormatter(clicks)}
-                        </Column>
-                      </Row>
-                      {index !== topLinks.length - 1 && (
-                        <Hr className="my-2 w-full border border-gray-200" />
-                      )}
-                    </div>
-                  ))}
+                  {topLinks.map(({ link, clicks }, index) => {
+                    const [domain, ...pathParts] = link.split("/");
+                    const path = pathParts.join("/") || "_root";
+                    return (
+                      <div key={index}>
+                        <Row>
+                          <Column align="left">
+                            <Link
+                              href={`https://app.dub.co/${workspaceSlug}/analytics?domain=${domain}&key=${path}`}
+                              className="text-sm font-medium text-black underline"
+                            >
+                              {smartTruncate(link, 33)}↗
+                            </Link>
+                          </Column>
+                          <Column
+                            align="right"
+                            className="text-sm text-gray-600"
+                          >
+                            {nFormatter(clicks)}
+                          </Column>
+                        </Row>
+                        {index !== topLinks.length - 1 && (
+                          <Hr className="my-2 w-full border border-gray-200" />
+                        )}
+                      </div>
+                    );
+                  })}
                 </Section>
               </>
             )}
@@ -173,7 +186,10 @@ export default function ClicksSummary({
                 </Section>
               </>
             )}
-            <Footer email={email} />
+            <Footer
+              email={email}
+              notificationSettingsUrl={notificationSettingsUrl}
+            />
           </Container>
         </Body>
       </Tailwind>

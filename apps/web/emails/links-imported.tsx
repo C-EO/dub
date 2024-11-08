@@ -1,4 +1,4 @@
-import { DUB_LOGO, linkConstructor, timeAgo } from "@dub/utils";
+import { DUB_WORDMARK, linkConstructor, pluralize, timeAgo } from "@dub/utils";
 import {
   Body,
   Column,
@@ -73,8 +73,7 @@ export default function LinksImported({
           <Container className="mx-auto my-10 max-w-[500px] rounded border border-solid border-gray-200 px-10 py-5">
             <Section className="mt-8">
               <Img
-                src={DUB_LOGO}
-                width="40"
+                src={DUB_WORDMARK}
                 height="40"
                 alt="Dub"
                 className="mx-auto my-0"
@@ -95,7 +94,7 @@ export default function LinksImported({
               >
                 {workspaceName}↗
               </Link>{" "}
-              , for the domain{domains.length > 1 ? "s" : ""}{" "}
+              , for the {pluralize("domain", domains.length)}{" "}
               <strong>{domains.join(", ")}</strong>.
             </Text>
             {links.length > 0 && (
@@ -129,7 +128,7 @@ export default function LinksImported({
                 ))}
               </Section>
             )}
-            {links.length > 5 && (
+            {count > 5 && (
               <Section className="my-8 text-center">
                 <Link
                   className="rounded-full bg-black px-6 py-3 text-center text-[12px] font-semibold text-white no-underline"
@@ -145,7 +144,7 @@ export default function LinksImported({
                 href="https://dub.co/help/article/how-to-add-custom-domain#step-2-configure-your-domain"
                 className="font-medium text-blue-600 no-underline"
               >
-                configured your domain{domains.length > 1 ? "s" : ""}
+                configured your {pluralize("domain", domains.length)}
               </Link>
               , you will need to do it before you can start using your links.
             </Text>

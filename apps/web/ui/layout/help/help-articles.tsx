@@ -1,13 +1,13 @@
 import { ExpandingArrow } from "@dub/ui";
-import va from "@vercel/analytics";
 import { Command, useCommandState } from "cmdk";
 import Fuse from "fuse.js";
 import { ExternalLink, MessageSquareText } from "lucide-react";
 import { useSession } from "next-auth/react";
+import posthog from "posthog-js";
 import { Dispatch, SetStateAction, useContext, useMemo, useRef } from "react";
 import Highlighter from "react-highlight-words";
 import { useDebouncedCallback } from "use-debounce";
-import { HelpContext } from "./portal";
+import { HelpContext } from ".";
 
 export function HelpArticles({
   setScreen,
@@ -17,7 +17,7 @@ export function HelpArticles({
   const { data: session } = useSession();
   const commandListRef = useRef<HTMLDivElement>(null);
   const debouncedTrackSearch = useDebouncedCallback((query: string) => {
-    va.track("CMDK Search", {
+    posthog.capture("help_articles_searched", {
       query,
     });
   }, 1000);
@@ -53,7 +53,7 @@ export function HelpArticles({
             >
               <MessageSquareText className="h-4 w-4 text-gray-400" />
               <div className="flex flex-col space-y-1">
-                <p className="text-sm font-medium text-purple-600">
+                <p className="text-sm font-medium text-blue-600">
                   Can't find what you're looking for?
                 </p>
                 <p className="text-xs text-gray-400">
@@ -119,7 +119,7 @@ const CommandResults = () => {
       key={slug}
       value={title}
       onSelect={() => {
-        va.track("CMDK Search Selected", {
+        posthog.capture("help_article_selected", {
           query: search,
           slug,
         });
@@ -129,21 +129,21 @@ const CommandResults = () => {
     >
       <div className="flex flex-col space-y-1">
         <Highlighter
-          highlightClassName="underline bg-transparent text-purple-500"
+          highlightClassName="underline bg-transparent text-blue-600"
           searchWords={search.split(" ")}
           autoEscape={true}
           textToHighlight={title}
-          className="text-sm font-medium text-gray-600 group-aria-selected:text-purple-600 sm:group-hover:text-purple-600"
+          className="text-sm font-medium text-gray-600 group-aria-selected:text-blue-600 sm:group-hover:text-blue-600"
         />
         <Highlighter
-          highlightClassName="underline bg-transparent text-purple-500"
+          highlightClassName="underline bg-transparent text-blue-600"
           searchWords={search.split(" ")}
           autoEscape={true}
           textToHighlight={summary}
           className="line-clamp-1 text-xs text-gray-400"
         />
       </div>
-      <ExpandingArrow className="invisible -ml-4 h-4 w-4 text-purple-600 group-aria-selected:visible sm:group-hover:visible" />
+      <ExpandingArrow className="invisible -ml-4 h-4 w-4 text-blue-600 group-aria-selected:visible sm:group-hover:visible" />
     </Command.Item>
   ));
 };

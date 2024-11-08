@@ -1,44 +1,72 @@
-import { ZodOpenApiPathsObject } from "zod-openapi";
-import { getBrowserAnalytics } from "./browser";
-import { getCityAnalytics } from "./city";
-import { getClicksAnalytics } from "./clicks";
-import { getCountryAnalytics } from "./country";
-import { getDeviceAnalytics } from "./device";
-import { getOSAnalytics } from "./os";
-import { getRefererAnalytics } from "./referer";
-import { getTimeseriesAnalytics } from "./timeseries";
-import { getTopLinks } from "./top-links";
-import { getTopURLs } from "./top-urls";
+import { openApiErrorResponses } from "@/lib/openapi/responses";
+import z from "@/lib/zod";
+import { analyticsQuerySchema } from "@/lib/zod/schemas/analytics";
+import { analyticsResponse } from "@/lib/zod/schemas/analytics-response";
+import { ZodOpenApiOperationObject, ZodOpenApiPathsObject } from "zod-openapi";
 
-export const analyticsPaths: ZodOpenApiPathsObject = {
-  "/analytics/clicks": {
-    get: getClicksAnalytics,
+const retrieveAnalytics: ZodOpenApiOperationObject = {
+  operationId: "retrieveAnalytics",
+  "x-speakeasy-name-override": "retrieve",
+  summary:
+    "Retrieve analytics for a link, a domain, or the authenticated workspace.",
+  description:
+    "Retrieve analytics for a link, a domain, or the authenticated workspace. The response type depends on the `event` and `type` query parameters.",
+  requestParams: {
+    query: analyticsQuerySchema,
   },
-  "/analytics/timeseries": {
-    get: getTimeseriesAnalytics,
+  responses: {
+    "200": {
+      description: "Analytics data",
+      content: {
+        "application/json": {
+          schema: z.union([
+            analyticsResponse.count,
+            z
+              .array(analyticsResponse.timeseries)
+              .openapi({ title: "AnalyticsTimeseries" }),
+            z
+              .array(analyticsResponse.continents)
+              .openapi({ title: "AnalyticsContinents" }),
+            z
+              .array(analyticsResponse.countries)
+              .openapi({ title: "AnalyticsCountries" }),
+            z
+              .array(analyticsResponse.cities)
+              .openapi({ title: "AnalyticsCities" }),
+            z
+              .array(analyticsResponse.devices)
+              .openapi({ title: "AnalyticsDevices" }),
+            z
+              .array(analyticsResponse.browsers)
+              .openapi({ title: "AnalyticsBrowsers" }),
+            z.array(analyticsResponse.os).openapi({ title: "AnalyticsOS" }),
+            z
+              .array(analyticsResponse.triggers)
+              .openapi({ title: "AnalyticsTriggers" }),
+            z
+              .array(analyticsResponse.referers)
+              .openapi({ title: "AnalyticsReferers" }),
+            z
+              .array(analyticsResponse.referer_urls)
+              .openapi({ title: "AnalyticsRefererUrls" }),
+            z
+              .array(analyticsResponse.top_links)
+              .openapi({ title: "AnalyticsTopLinks" }),
+            z
+              .array(analyticsResponse.top_urls)
+              .openapi({ title: "AnalyticsTopUrls" }),
+          ]),
+        },
+      },
+    },
+    ...openApiErrorResponses,
   },
-  "/analytics/country": {
-    get: getCountryAnalytics,
-  },
-  "/analytics/city": {
-    get: getCityAnalytics,
-  },
-  "/analytics/device": {
-    get: getDeviceAnalytics,
-  },
-  "/analytics/browser": {
-    get: getBrowserAnalytics,
-  },
-  "/analytics/os": {
-    get: getOSAnalytics,
-  },
-  "/analytics/referer": {
-    get: getRefererAnalytics,
-  },
-  "/analytics/top_links": {
-    get: getTopLinks,
-  },
-  "/analytics/top_urls": {
-    get: getTopURLs,
+  tags: ["Analytics"],
+  security: [{ token: [] }],
+};
+
+export const analyticsPath: ZodOpenApiPathsObject = {
+  "/analytics": {
+    get: retrieveAnalytics,
   },
 };

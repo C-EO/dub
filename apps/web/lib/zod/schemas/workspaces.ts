@@ -6,8 +6,15 @@ import {
   validSlugRegex,
 } from "@dub/utils";
 import slugify from "@sindresorhus/slugify";
-import { planSchema, roleSchema } from ".";
 import { DomainSchema } from "./domains";
+import { planSchema, roleSchema } from "./misc";
+
+export const workspaceIdSchema = z.object({
+  workspaceId: z
+    .string()
+    .min(1, "Workspace ID is required.")
+    .describe("The ID of the workspace the link belongs to."),
+});
 
 export const WorkspaceSchema = z
   .object({
@@ -19,13 +26,11 @@ export const WorkspaceSchema = z
       .nullable()
       .default(null)
       .describe("The logo of the workspace."),
-    usage: z.number().describe("The usage of the workspace."),
-    usageLimit: z.number().describe("The usage limit of the workspace."),
-    linksUsage: z.number().describe("The links usage of the workspace."),
-    linksLimit: z.number().describe("The links limit of the workspace."),
-    domainsLimit: z.number().describe("The domains limit of the workspace."),
-    tagsLimit: z.number().describe("The tags limit of the workspace."),
-    usersLimit: z.number().describe("The users limit of the workspace."),
+    inviteCode: z
+      .string()
+      .nullable()
+      .describe("The invite code of the workspace."),
+
     plan: planSchema,
     stripeId: z.string().nullable().describe("The Stripe ID of the workspace."),
     billingCycleStart: z
@@ -33,6 +38,51 @@ export const WorkspaceSchema = z
       .describe(
         "The date and time when the billing cycle starts for the workspace.",
       ),
+    paymentFailedAt: z
+      .date()
+      .nullable()
+      .describe("The date and time when the payment failed for the workspace."),
+    stripeConnectId: z
+      .string()
+      .nullable()
+      .describe("[BETA]: The Stripe Connect ID of the workspace."),
+
+    usage: z.number().describe("The usage of the workspace."),
+    usageLimit: z.number().describe("The usage limit of the workspace."),
+    linksUsage: z.number().describe("The links usage of the workspace."),
+    linksLimit: z.number().describe("The links limit of the workspace."),
+    salesUsage: z
+      .number()
+      .describe(
+        "The dollar amount of tracked revenue in the current billing cycle (in cents).",
+      ),
+    salesLimit: z
+      .number()
+      .describe(
+        "The limit of tracked revenue in the current billing cycle (in cents).",
+      ),
+    domainsLimit: z.number().describe("The domains limit of the workspace."),
+    tagsLimit: z.number().describe("The tags limit of the workspace."),
+    usersLimit: z.number().describe("The users limit of the workspace."),
+    aiUsage: z.number().describe("The AI usage of the workspace."),
+    aiLimit: z.number().describe("The AI limit of the workspace."),
+
+    referralLinkId: z
+      .string()
+      .nullable()
+      .describe("The ID of the referral link of the workspace."),
+
+    conversionEnabled: z
+      .boolean()
+      .describe(
+        "Whether the workspace has conversion tracking enabled (d.to/conversions).",
+      ),
+    dotLinkClaimed: z
+      .boolean()
+      .describe(
+        "Whether the workspace has claimed a free .link domain. (dub.link/free)",
+      ),
+
     createdAt: z
       .date()
       .describe("The date and time when the workspace was created."),
@@ -48,13 +98,20 @@ export const WorkspaceSchema = z
         DomainSchema.pick({
           slug: true,
           primary: true,
+          verified: true,
         }),
       )
       .describe("The domains of the workspace."),
-    inviteCode: z
+    flags: z
+      .record(z.boolean())
+      .optional()
+      .describe(
+        "The feature flags of the workspace, indicating which features are enabled.",
+      ),
+    publishableKey: z
       .string()
       .nullable()
-      .describe("The invite code of the workspace."),
+      .describe("The publishable key of the workspace."),
   })
   .openapi({
     title: "Workspace",
@@ -78,3 +135,10 @@ export const createWorkspaceSchema = z.object({
     })
     .optional(),
 });
+
+export const updateWorkspaceSchema = createWorkspaceSchema
+  .pick({
+    name: true,
+    slug: true,
+  })
+  .partial();

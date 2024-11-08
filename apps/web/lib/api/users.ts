@@ -1,6 +1,6 @@
 import { Session, hashToken } from "@/lib/auth";
-import prisma from "@/lib/prisma";
-import { WorkspaceProps } from "@/lib/types";
+import { prisma } from "@/lib/prisma";
+import { Role, WorkspaceWithUsers } from "@/lib/types";
 import { TWO_WEEKS_IN_SECONDS } from "@dub/utils";
 import { randomBytes } from "crypto";
 import { sendEmail } from "emails";
@@ -9,11 +9,13 @@ import { DubApiError } from "./errors";
 
 export async function inviteUser({
   email,
+  role = "member",
   workspace,
   session,
 }: {
   email: string;
-  workspace: WorkspaceProps;
+  role?: Role;
+  workspace: WorkspaceWithUsers;
   session?: Session;
 }) {
   // same method of generating a token as next-auth
@@ -27,6 +29,7 @@ export async function inviteUser({
     await prisma.projectInvite.create({
       data: {
         email,
+        role,
         expires,
         projectId: workspace.id,
       },
@@ -43,13 +46,13 @@ export async function inviteUser({
   await prisma.verificationToken.create({
     data: {
       identifier: email,
-      token: hashToken(token),
+      token: await hashToken(token, { secret: true }),
       expires,
     },
   });
 
   const params = new URLSearchParams({
-    callbackUrl: `${process.env.NEXTAUTH_URL}/${workspace.slug}`,
+    callbackUrl: `${process.env.NEXTAUTH_URL}/${workspace.slug}?invite=1`,
     email,
     token,
   });

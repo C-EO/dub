@@ -1,17 +1,8 @@
-import { Background } from "@dub/ui";
+"use client";
+
+import { SessionProvider } from "next-auth/react";
 import { ReactNode } from "react";
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  return (
-    <>
-      <Background />
-      <div className="relative z-10 flex h-screen w-screen justify-center">
-        {children}
-      </div>
-    </>
-  );
+export default function AdminLayout({ children }: { children: ReactNode }) {
+  return <SessionProvider>{children}</SessionProvider>;
 }

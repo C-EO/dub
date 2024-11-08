@@ -1,9 +1,8 @@
 "use client";
 
 import { InlineSnippet } from "@dub/ui";
-import { STAGGER_CHILD_VARIANTS } from "@dub/utils";
+import { createHref, STAGGER_CHILD_VARIANTS } from "@dub/utils";
 import Spline from "@splinetool/react-spline";
-import va from "@vercel/analytics";
 import { motion } from "framer-motion";
 import { useParams } from "next/navigation";
 import { useState } from "react";
@@ -15,7 +14,7 @@ export default function PlaceholderContent() {
   const onLoad = () => {
     setLoading(false);
   };
-  // workarouond to avoid the blinking effect when Spline loads
+  // workaround to avoid the blinking effect when Spline loads
   const [opacity] = useDebounce(loading ? 0 : 1, 200);
 
   const [showText] = useDebounce(loading ? false : true, 800);
@@ -34,7 +33,7 @@ export default function PlaceholderContent() {
         <Spline
           onLoad={onLoad}
           style={{ opacity: opacity }}
-          scene="https://prod.spline.design/cJkq6hsiUPNRHeMf/scene.splinecode"
+          scene="https://assets.dub.co/misc/scene.splinecode"
         />
       </div>
       <motion.div
@@ -62,13 +61,12 @@ export default function PlaceholderContent() {
           <InlineSnippet>{domain}</InlineSnippet> is a custom domain on{" "}
           <a
             className="bg-gradient-to-r from-purple-400 to-pink-600 bg-clip-text font-semibold text-transparent decoration-rose-600 hover:underline"
-            href="https://dub.co"
-            onClick={() =>
-              va.track("Referred from custom domain", {
-                domain,
-                medium: "text",
-              })
-            }
+            href={createHref("/", domain, {
+              utm_source: "Custom Domain",
+              utm_medium: "Welcome Page",
+              utm_campaign: domain,
+              utm_content: "Dub.co",
+            })}
           >
             {process.env.NEXT_PUBLIC_APP_NAME}
           </a>{" "}
@@ -76,13 +74,12 @@ export default function PlaceholderContent() {
         </motion.p>
         <motion.a
           variants={STAGGER_CHILD_VARIANTS}
-          href="https://dub.co"
-          onClick={() =>
-            va.track("Referred from custom domain", {
-              domain,
-              medium: "button",
-            })
-          }
+          href={createHref("/home", domain, {
+            utm_source: "Custom Domain",
+            utm_medium: "Welcome Page",
+            utm_campaign: domain,
+            utm_content: "Create Your Free Branded Link",
+          })}
           className="rounded-full bg-gray-800 px-10 py-2 font-medium text-white transition-colors hover:bg-black"
         >
           Create Your Free Branded Link

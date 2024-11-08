@@ -38,6 +38,7 @@ next-env.d.ts
 
 # miscellaneous
 /pages/api/scripts*
+packages/stripe-app/.build/*
 .react-email
 .contentlayer
 .vscode

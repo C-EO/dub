@@ -1,43 +1,29 @@
-import { getDomainOrLink } from "@/lib/planetscale";
-import Analytics from "@/ui/analytics";
-import { constructMetadata } from "@dub/utils";
-import { notFound } from "next/navigation";
-import { Suspense } from "react";
+import { prismaEdge } from "@/lib/prisma/edge";
+import { APP_DOMAIN } from "@dub/utils";
+import { notFound, redirect } from "next/navigation";
 
 export const runtime = "edge";
 
-export async function generateMetadata({
+export default async function OldStatsPage({
   params,
 }: {
   params: { domain: string; key: string };
 }) {
-  const data = await getDomainOrLink(params);
-
-  // if the link doesn't exist or is explicitly private (publicStats === false)
-  if (!data?.publicStats) {
-    return;
-  }
-
-  return constructMetadata({
-    title: `Analytics for ${params.domain}/${params.key} – ${process.env.NEXT_PUBLIC_APP_NAME}`,
-    image: `https://${params.domain}/api/og/analytics?domain=${params.domain}&key=${params.key}`,
+  const link = await prismaEdge.link.findUnique({
+    where: {
+      domain_key: {
+        domain: params.domain,
+        key: params.key,
+      },
+    },
+    select: {
+      dashboard: true,
+    },
   });
-}
 
-export default async function StatsPage({
-  params,
-}: {
-  params: { domain: string; key: string };
-}) {
-  const data = await getDomainOrLink(params);
-
-  if (!data?.publicStats) {
+  if (!link?.dashboard) {
     notFound();
   }
 
-  return (
-    <Suspense fallback={<div className="h-screen w-full bg-gray-50" />}>
-      <Analytics staticDomain={params.domain} staticUrl={data.url} />
-    </Suspense>
-  );
+  redirect(`${APP_DOMAIN}/share/${link.dashboard.id}`);
 }

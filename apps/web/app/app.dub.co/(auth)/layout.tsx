@@ -1,18 +1,20 @@
-import HelpPortal from "@/ui/layout/help";
-import { Background } from "@dub/ui";
+import Toolbar from "@/ui/layout/toolbar/toolbar";
+import { NewBackground } from "@/ui/shared/new-background";
+import { Wordmark } from "@dub/ui";
+import Link from "next/link";
 import { ReactNode } from "react";
-import Providers from "./providers";
-
-export const runtime = "edge";
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   return (
-    <Providers>
-      <HelpPortal />
-      <Background />
-      <div className="relative z-10 flex h-screen w-screen justify-center">
+    <>
+      <Toolbar />
+      <NewBackground />
+      <div className="relative flex min-h-screen w-full justify-center">
+        <Link href="/" className="absolute left-4 top-3 z-10">
+          <Wordmark className="h-6" />
+        </Link>
         {children}
       </div>
-    </Providers>
+    </>
   );
 }

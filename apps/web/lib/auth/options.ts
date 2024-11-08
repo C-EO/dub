@@ -1,17 +1,28 @@
 import { isBlacklistedEmail } from "@/lib/edge-config";
 import jackson from "@/lib/jackson";
-import prisma from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { subscribe } from "@/lib/resend";
+import { isStored, storage } from "@/lib/storage";
+import { UserProps } from "@/lib/types";
+import { ratelimit } from "@/lib/upstash";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
+import { waitUntil } from "@vercel/functions";
 import { sendEmail } from "emails";
 import LoginLink from "emails/login-link";
 import WelcomeEmail from "emails/welcome-email";
-import { type NextAuthOptions } from "next-auth";
+import { User, type NextAuthOptions } from "next-auth";
+import { AdapterUser } from "next-auth/adapters";
+import { JWT } from "next-auth/jwt";
 import CredentialsProvider from "next-auth/providers/credentials";
 import EmailProvider from "next-auth/providers/email";
 import GithubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
-import { subscribe } from "../flodesk";
-import { isStored, storage } from "../storage";
+import {
+  exceededLoginAttemptsThreshold,
+  incrementLoginAttempts,
+} from "./lock-account";
+import { validatePassword } from "./password";
+import { trackLead } from "./track-lead";
 
 const VERCEL_DEPLOYMENT = !!process.env.VERCEL_URL;
 
@@ -160,7 +171,95 @@ export const authOptions: NextAuthOptions = {
         };
       },
     }),
+
+    // Sign in with email and password
+    CredentialsProvider({
+      id: "credentials",
+      name: "Dub.co",
+      type: "credentials",
+      credentials: {
+        email: { type: "email" },
+        password: { type: "password" },
+      },
+      async authorize(credentials, req) {
+        if (!credentials) {
+          throw new Error("no-credentials");
+        }
+
+        const { email, password } = credentials;
+
+        if (!email || !password) {
+          throw new Error("no-credentials");
+        }
+
+        const { success } = await ratelimit(5, "1 m").limit(
+          `login-attempts:${email}`,
+        );
+
+        if (!success) {
+          throw new Error("too-many-login-attempts");
+        }
+
+        const user = await prisma.user.findUnique({
+          where: { email },
+          select: {
+            id: true,
+            passwordHash: true,
+            name: true,
+            email: true,
+            image: true,
+            invalidLoginAttempts: true,
+            emailVerified: true,
+          },
+        });
+
+        if (!user || !user.passwordHash) {
+          throw new Error("invalid-credentials");
+        }
+
+        if (exceededLoginAttemptsThreshold(user)) {
+          throw new Error("exceeded-login-attempts");
+        }
+
+        const passwordMatch = await validatePassword({
+          password,
+          passwordHash: user.passwordHash,
+        });
+
+        if (!passwordMatch) {
+          const exceededLoginAttempts = exceededLoginAttemptsThreshold(
+            await incrementLoginAttempts(user),
+          );
+
+          if (exceededLoginAttempts) {
+            throw new Error("exceeded-login-attempts");
+          } else {
+            throw new Error("invalid-credentials");
+          }
+        }
+
+        if (!user.emailVerified) {
+          throw new Error("email-not-verified");
+        }
+
+        // Reset invalid login attempts
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            invalidLoginAttempts: 0,
+          },
+        });
+
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+        };
+      },
+    }),
   ],
+  // @ts-ignore
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
   cookies: {
@@ -179,6 +278,7 @@ export const authOptions: NextAuthOptions = {
     },
   },
   pages: {
+    signIn: "/login",
     error: "/login",
   },
   callbacks: {
@@ -187,6 +287,11 @@ export const authOptions: NextAuthOptions = {
       if (!user.email || (await isBlacklistedEmail(user.email))) {
         return false;
       }
+
+      if (user?.lockedAt) {
+        return false;
+      }
+
       if (account?.provider === "google" || account?.provider === "github") {
         const userExists = await prisma.user.findUnique({
           where: { email: user.email },
@@ -275,7 +380,15 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-    jwt: async ({ token, user, trigger }) => {
+    jwt: async ({
+      token,
+      user,
+      trigger,
+    }: {
+      token: JWT;
+      user: User | AdapterUser | UserProps;
+      trigger?: "signIn" | "update" | "signUp";
+    }) => {
       if (user) {
         token.user = user;
       }
@@ -310,46 +423,61 @@ export const authOptions: NextAuthOptions = {
         const user = await prisma.user.findUnique({
           where: { email },
           select: {
+            id: true,
             name: true,
+            email: true,
+            image: true,
             createdAt: true,
           },
         });
+        if (!user) {
+          return;
+        }
         // only send the welcome email if the user was created in the last 10s
         // (this is a workaround because the `isNewUser` flag is triggered when a user does `dangerousEmailAccountLinking`)
         if (
-          user?.createdAt &&
+          user.createdAt &&
           new Date(user.createdAt).getTime() > Date.now() - 10000 &&
           process.env.NEXT_PUBLIC_IS_DUB
         ) {
-          await Promise.allSettled([
-            subscribe({ email, name: user.name || undefined }),
-            sendEmail({
-              subject: "Welcome to Dub.co!",
-              email,
-              react: WelcomeEmail({
+          waitUntil(
+            Promise.allSettled([
+              subscribe({ email, name: user.name || undefined }),
+              sendEmail({
+                subject: "Welcome to Dub.co!",
                 email,
-                name: user.name || null,
+                react: WelcomeEmail({
+                  email,
+                  name: user.name || null,
+                }),
+                // send the welcome email 5 minutes after the user signed up
+                scheduledAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
+                marketing: true,
               }),
-              marketing: true,
-            }),
-          ]);
+              trackLead(user),
+            ]),
+          );
         }
       }
       // lazily backup user avatar to R2
       const currentImage = message.user.image;
       if (currentImage && !isStored(currentImage)) {
-        const { url } = await storage.upload(
-          `avatars/${message.user.id}`,
-          currentImage,
+        waitUntil(
+          (async () => {
+            const { url } = await storage.upload(
+              `avatars/${message.user.id}`,
+              currentImage,
+            );
+            await prisma.user.update({
+              where: {
+                id: message.user.id,
+              },
+              data: {
+                image: url,
+              },
+            });
+          })(),
         );
-        await prisma.user.update({
-          where: {
-            id: message.user.id,
-          },
-          data: {
-            image: url,
-          },
-        });
       }
     },
   },

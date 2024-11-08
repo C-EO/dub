@@ -9,12 +9,10 @@ export const DEFAULT_REDIRECTS = {
   dashboard: "https://app.dub.co",
   links: "https://app.dub.co/links",
   settings: "https://app.dub.co/settings",
-  welcome: "https://app.dub.co/welcome",
+  welcome: "https://app.dub.co/onboarding/welcome",
   discord: "https://twitter.com/dubdotco", // placeholder for now
 };
 
 export const DUB_HEADERS = {
-  headers: {
-    "x-powered-by": "Dub.co - Link management for modern marketing teams",
-  },
+  "x-powered-by": "Dub.co - Link management for modern marketing teams",
 };

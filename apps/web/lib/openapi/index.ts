@@ -1,18 +1,18 @@
 import { openApiErrorResponses } from "@/lib/openapi/responses";
-import {
-  DomainSchema,
-  LinkSchema,
-  TagSchema,
-  WorkspaceSchema,
-} from "@/lib/zod/schemas";
-import { API_DOMAIN } from "@dub/utils";
+import { DomainSchema } from "@/lib/zod/schemas/domains";
+import { LinkSchema } from "@/lib/zod/schemas/links";
+import { TagSchema } from "@/lib/zod/schemas/tags";
+import { WorkspaceSchema } from "@/lib/zod/schemas/workspaces";
 import { createDocument } from "zod-openapi";
-import { analyticsPaths } from "./analytics";
+import { webhookEventSchema } from "../webhook/schemas";
+import { analyticsPath } from "./analytics";
 import { domainsPaths } from "./domains";
+import { eventsPath } from "./events";
 import { linksPaths } from "./links";
 import { metatagsPath } from "./metatags";
 import { qrCodePaths } from "./qr";
 import { tagsPaths } from "./tags";
+import { trackPaths } from "./track";
 import { workspacesPaths } from "./workspaces";
 
 export const document = createDocument({
@@ -34,17 +34,19 @@ export const document = createDocument({
   },
   servers: [
     {
-      url: API_DOMAIN,
+      url: "https://api.dub.co",
       description: "Production API",
     },
   ],
   paths: {
     ...linksPaths,
     ...qrCodePaths,
-    ...analyticsPaths,
+    ...analyticsPath,
+    ...eventsPath,
     ...workspacesPaths,
     ...tagsPaths,
     ...domainsPaths,
+    ...trackPaths,
     ...metatagsPath,
   },
   components: {
@@ -53,6 +55,7 @@ export const document = createDocument({
       WorkspaceSchema,
       TagSchema,
       DomainSchema,
+      webhookEventSchema,
     },
     securitySchemes: {
       token: {
@@ -65,27 +68,5 @@ export const document = createDocument({
     responses: {
       ...openApiErrorResponses,
     },
-  },
-  "x-speakeasy-globals": {
-    parameters: [
-      {
-        "x-speakeasy-globals-hidden": true,
-        name: "workspaceId",
-        in: "query",
-        required: true,
-        schema: {
-          type: "string",
-        },
-      },
-      {
-        "x-speakeasy-globals-hidden": true,
-        name: "projectSlug",
-        in: "query",
-        deprecated: true,
-        schema: {
-          type: "string",
-        },
-      },
-    ],
   },
 });

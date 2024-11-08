@@ -1,5 +1,5 @@
 import z from "@/lib/zod";
-import { WorkspaceSchema } from "@/lib/zod/schemas";
+import { WorkspaceSchema } from "@/lib/zod/schemas/workspaces";
 import { Project } from "@prisma/client";
 import { describe, expect, test } from "vitest";
 import { IntegrationHarness } from "../utils/integration";
@@ -10,7 +10,7 @@ describe("GET /workspaces/{idOrSlug}", async () => {
 
   test("by id", async () => {
     const { status, data: workspaceFetched } = await http.get<Project>({
-      path: `/workspaces/${workspace.workspaceId}`,
+      path: `/workspaces/${workspace.id}`,
     });
 
     const { id, name, slug } = workspaceFetched;

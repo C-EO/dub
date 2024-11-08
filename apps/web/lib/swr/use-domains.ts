@@ -1,75 +1,99 @@
 import { DomainProps } from "@/lib/types";
+import { useRouterStuff } from "@dub/ui";
 import {
   DUB_DOMAINS,
   DUB_WORKSPACE_ID,
   SHORT_DOMAIN,
   fetcher,
 } from "@dub/utils";
+import { useMemo } from "react";
 import useSWR from "swr";
 import useDefaultDomains from "./use-default-domains";
 import useWorkspace from "./use-workspace";
 
 export default function useDomains({
-  id: workspaceId,
-  domain,
-}: { id?: string; domain?: string } = {}) {
-  let id: string | undefined = undefined;
-  if (workspaceId) {
-    id = workspaceId;
-  } else {
-    const { id: paramsId } = useWorkspace();
-    id = paramsId;
-  }
+  ignoreParams,
+  opts,
+}: {
+  ignoreParams?: boolean;
+  opts?: Record<string, string>;
+} = {}) {
+  const { id: workspaceId } = useWorkspace();
+  const { getQueryString } = useRouterStuff();
 
   const { data, error, mutate } = useSWR<DomainProps[]>(
-    id && `/api/domains?workspaceId=${id}`,
+    workspaceId &&
+      `/api/domains${
+        ignoreParams
+          ? "?" +
+            new URLSearchParams({
+              ...opts,
+              workspaceId,
+            }).toString()
+          : getQueryString({
+              ...opts,
+              workspaceId,
+            })
+      }`,
     fetcher,
     {
       dedupingInterval: 60000,
     },
   );
-  const { defaultDomains: workspaceDefaultDomains } = useDefaultDomains();
+  const {
+    defaultDomains: workspaceDefaultDomains,
+    loading: loadingDefaultDomains,
+  } = useDefaultDomains(opts);
 
-  const allWorkspaceDomains = data || [];
-  const activeWorkspaceDomains = data?.filter((domain) => !domain.archived);
-  const archivedWorkspaceDomains = data?.filter((domain) => domain.archived);
+  const allWorkspaceDomains = useMemo(() => data || [], [data]);
+  const activeWorkspaceDomains = useMemo(
+    () => data?.filter((domain) => !domain.archived),
+    [data],
+  );
 
-  const activeDefaultDomains =
-    (workspaceDefaultDomains &&
-      DUB_DOMAINS.filter((d) => workspaceDefaultDomains?.includes(d.slug))) ||
-    DUB_DOMAINS;
+  const activeDefaultDomains = useMemo(
+    () =>
+      (workspaceDefaultDomains &&
+        DUB_DOMAINS.filter((d) => workspaceDefaultDomains?.includes(d.slug))) ||
+      DUB_DOMAINS,
+    [workspaceDefaultDomains],
+  );
 
-  const allDomains = [
-    ...allWorkspaceDomains,
-    ...(id === `ws_${DUB_WORKSPACE_ID}` ? [] : DUB_DOMAINS),
-  ];
-  const allActiveDomains = [
-    ...(activeWorkspaceDomains || []),
-    ...(id === `ws_${DUB_WORKSPACE_ID}` ? [] : activeDefaultDomains),
-  ];
+  const allDomains = useMemo(
+    () => [
+      ...allWorkspaceDomains,
+      ...(workspaceId === `ws_${DUB_WORKSPACE_ID}` ? [] : DUB_DOMAINS),
+    ],
+    [allWorkspaceDomains, workspaceId],
+  );
+  const allActiveDomains = useMemo(
+    () => [
+      ...(activeWorkspaceDomains || []),
+      ...(workspaceId === `ws_${DUB_WORKSPACE_ID}` ? [] : activeDefaultDomains),
+    ],
+    [activeWorkspaceDomains, activeDefaultDomains, workspaceId],
+  );
 
-  const primaryDomain =
-    activeWorkspaceDomains && activeWorkspaceDomains.length > 0
-      ? activeWorkspaceDomains.find((domain) => domain.primary)?.slug ||
+  const primaryDomain = useMemo(() => {
+    if (activeWorkspaceDomains && activeWorkspaceDomains.length > 0) {
+      return (
+        activeWorkspaceDomains.find(({ primary }) => primary)?.slug ||
         activeWorkspaceDomains[0].slug
-      : SHORT_DOMAIN;
-
-  const verified = domain
-    ? // If a domain is passed, check if it's verified
-      allDomains.find((d) => d.slug === domain)?.verified
-    : // If no domain is passed, check if any of the workspace domains are verified
-      activeWorkspaceDomains?.some((d) => d.verified);
+      );
+    } else if (activeDefaultDomains.find(({ slug }) => slug === "dub.link")) {
+      return "dub.link";
+    }
+    return SHORT_DOMAIN;
+  }, [activeDefaultDomains, activeWorkspaceDomains]);
 
   return {
     activeWorkspaceDomains, // active workspace domains
-    archivedWorkspaceDomains, // archived workspace domains
     activeDefaultDomains, // active default Dub domains
     allWorkspaceDomains, // all workspace domains (active + archived)
     allActiveDomains, // all active domains (active workspace domains + active default Dub domains)
     allDomains, // all domains (all workspace domains + all default Dub domains)
     primaryDomain,
-    verified,
-    loading: !data && !error,
+    loading: (!data && !error) || loadingDefaultDomains,
     mutate,
     error,
   };

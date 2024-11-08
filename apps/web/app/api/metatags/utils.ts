@@ -1,15 +1,11 @@
 import { recordMetatags } from "@/lib/upstash";
 import { fetchWithTimeout, isValidUrl } from "@dub/utils";
+import { waitUntil } from "@vercel/functions";
 import he from "he";
-import { internal_runWithWaitUntil as waitUntil } from "next/dist/server/web/internal-edge-wait-until";
 import { parse } from "node-html-parser";
 
 export const getHtml = async (url: string) => {
-  return await fetchWithTimeout(url, {
-    headers: {
-      "User-Agent": "Dub.co Bot",
-    },
-  })
+  return await fetchWithTimeout(url)
     .then((r) => r.text())
     .catch(() => null);
 };
@@ -90,9 +86,7 @@ export const getMetaTags = async (url: string) => {
     object["icon"] ||
     object["shortcut icon"];
 
-  waitUntil(async () => {
-    await recordMetatags(url, title && description && image ? false : true);
-  });
+  waitUntil(recordMetatags(url, title && description && image ? false : true));
 
   return {
     title: title || url,

@@ -1,40 +1,39 @@
 "use client";
 
-import { ALL_TOOLS, COMPARE_PAGES, cn, fetcher } from "@dub/utils";
-import va from "@vercel/analytics";
+import { ALL_TOOLS, cn, createHref, fetcher } from "@dub/utils";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import useSWR from "swr";
-import { FEATURES_LIST } from "./content";
+import { COMPARE_PAGES, FEATURES_LIST, LEGAL_PAGES } from "./content";
 import { Github, LinkedIn, Twitter, YouTube } from "./icons";
 import { MaxWidthWrapper } from "./max-width-wrapper";
-import { NavLogo } from "./nav-logo";
+import { NavWordmark } from "./nav-wordmark";
 
 const navigation = {
-  features: FEATURES_LIST.map(({ shortTitle, slug }) => ({
-    name: shortTitle,
-    href: `/${slug}`,
+  features: FEATURES_LIST.map(({ title, href }) => ({
+    name: title,
+    href,
   })),
   product: [
     { name: "Blog", href: "/blog" },
-    { name: "Brand", href: "/brand" },
     { name: "Changelog", href: "/changelog" },
     { name: "Customers", href: "/customers" },
     { name: "Enterprise", href: "/enterprise" },
     { name: "Pricing", href: "/pricing" },
+    { name: "Docs", href: "/docs" },
     { name: "Help Center", href: "/help" },
+    { name: "Brand", href: "/brand" },
   ],
   compare: COMPARE_PAGES.map(({ name, slug }) => ({
     name,
     href: `/compare/${slug}`,
   })),
-  legal: [
-    { name: "Privacy", href: "/privacy" },
-    { name: "Terms", href: "/terms" },
-    { name: "Abuse", href: "/abuse" },
-  ],
+  legal: LEGAL_PAGES.map(({ name, slug }) => ({
+    name,
+    href: `/legal/${slug}`,
+  })),
   tools: ALL_TOOLS.map(({ name, slug }) => ({
     name,
     href: `/tools/${slug}`,
@@ -44,30 +43,24 @@ const navigation = {
 export function Footer() {
   const { domain = "dub.co" } = useParams() as { domain: string };
 
-  const createHref = (href: string) =>
-    domain === "dub.co" ? href : `https://dub.co${href}`;
-
   return (
     <footer>
       <MaxWidthWrapper className="relative z-10 overflow-hidden border border-b-0 border-gray-200 bg-white/50 pb-60 pt-16 backdrop-blur-lg md:rounded-t-2xl">
         <div className="xl:grid xl:grid-cols-3 xl:gap-8">
           <div className="space-y-6">
             <Link
-              href={createHref("/")}
-              {...(domain !== "dub.co" && {
-                onClick: () => {
-                  va.track("Referred from custom domain", {
-                    domain,
-                    medium: "footer item (logo)",
-                  });
-                },
+              href={createHref("/", domain, {
+                utm_source: "Custom Domain",
+                utm_medium: "Footer",
+                utm_campaign: domain,
+                utm_content: "Logo",
               })}
               className="block max-w-fit"
             >
               <span className="sr-only">
                 {process.env.NEXT_PUBLIC_APP_NAME} Logo
               </span>
-              <NavLogo className="h-8 text-gray-800" />
+              <NavWordmark className="h-8 text-gray-800" />
             </Link>
             <p className="max-w-xs text-sm text-gray-500">
               Giving modern marketing teams superpowers with short links that
@@ -119,21 +112,16 @@ export function Footer() {
           <div className="mt-16 grid grid-cols-2 gap-4 xl:col-span-2 xl:mt-0">
             <div className="md:grid md:grid-cols-2">
               <div>
-                <h3 className="text-sm font-semibold text-gray-800">
-                  Features
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-800">Product</h3>
                 <ul role="list" className="mt-4 space-y-4">
                   {navigation.features.map((item) => (
                     <li key={item.name}>
                       <Link
-                        href={createHref(item.href)}
-                        {...(domain !== "dub.co" && {
-                          onClick: () => {
-                            va.track("Referred from custom domain", {
-                              domain,
-                              medium: `footer item (${item.name})`,
-                            });
-                          },
+                        href={createHref(item.href, domain, {
+                          utm_source: "Custom Domain",
+                          utm_medium: "Footer",
+                          utm_campaign: domain,
+                          utm_content: item.name,
                         })}
                         className="text-sm text-gray-500 hover:text-gray-800"
                       >
@@ -144,19 +132,18 @@ export function Footer() {
                 </ul>
               </div>
               <div className="mt-10 md:mt-0">
-                <h3 className="text-sm font-semibold text-gray-800">Product</h3>
+                <h3 className="text-sm font-semibold text-gray-800">
+                  Resources
+                </h3>
                 <ul role="list" className="mt-4 space-y-4">
                   {navigation.product.map((item) => (
                     <li key={item.name}>
                       <Link
-                        href={createHref(item.href)}
-                        {...(domain !== "dub.co" && {
-                          onClick: () => {
-                            va.track("Referred from custom domain", {
-                              domain,
-                              medium: `footer item (${item.name})`,
-                            });
-                          },
+                        href={createHref(item.href, domain, {
+                          utm_source: "Custom Domain",
+                          utm_medium: "Footer",
+                          utm_campaign: domain,
+                          utm_content: item.name,
                         })}
                         className="text-sm text-gray-500 hover:text-gray-800"
                       >
@@ -177,14 +164,11 @@ export function Footer() {
                     {navigation.compare.map((item) => (
                       <li key={item.name}>
                         <Link
-                          href={createHref(item.href)}
-                          {...(domain !== "dub.co" && {
-                            onClick: () => {
-                              va.track("Referred from custom domain", {
-                                domain,
-                                medium: `footer item (${item.name})`,
-                              });
-                            },
+                          href={createHref(item.href, domain, {
+                            utm_source: "Custom Domain",
+                            utm_medium: "Footer",
+                            utm_campaign: domain,
+                            utm_content: item.name,
                           })}
                           className="text-sm text-gray-500 hover:text-gray-800"
                         >
@@ -200,14 +184,11 @@ export function Footer() {
                     {navigation.legal.map((item) => (
                       <li key={item.name}>
                         <Link
-                          href={createHref(item.href)}
-                          {...(domain !== "dub.co" && {
-                            onClick: () => {
-                              va.track("Referred from custom domain", {
-                                domain,
-                                medium: `footer item (${item.name})`,
-                              });
-                            },
+                          href={createHref(item.href, domain, {
+                            utm_source: "Custom Domain",
+                            utm_medium: "Footer",
+                            utm_campaign: domain,
+                            utm_content: item.name,
                           })}
                           className="text-sm text-gray-500 hover:text-gray-800"
                         >
@@ -225,14 +206,11 @@ export function Footer() {
                   {navigation.tools.map((item) => (
                     <li key={item.name}>
                       <Link
-                        href={createHref(item.href)}
-                        {...(domain !== "dub.co" && {
-                          onClick: () => {
-                            va.track("Referred from custom domain", {
-                              domain,
-                              medium: `footer item (${item.name})`,
-                            });
-                          },
+                        href={createHref(item.href, domain, {
+                          utm_source: "Custom Domain",
+                          utm_medium: "Footer",
+                          utm_campaign: domain,
+                          utm_content: item.name,
                         })}
                         className="text-sm text-gray-500 hover:text-gray-800"
                       >

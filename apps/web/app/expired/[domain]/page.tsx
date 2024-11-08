@@ -1,7 +1,7 @@
-import { getDomainViaEdge } from "@/lib/planetscale";
-import { Background, Footer, Nav } from "@dub/ui";
+import { getDomainViaEdge } from "@/lib/planetscale/get-domain-via-edge";
+import { Background, Footer, Nav, NavMobile } from "@dub/ui";
+import { CircleHalfDottedClock } from "@dub/ui/src/icons";
 import { constructMetadata } from "@dub/utils";
-import { TimerOff } from "lucide-react";
 import { redirect } from "next/navigation";
 
 export const runtime = "edge";
@@ -13,7 +13,7 @@ export const metadata = constructMetadata({
   noIndex: true,
 });
 
-export default async function ExpiredPage({
+export default async function ExpiredLinkPage({
   params,
 }: {
   params: { domain: string };
@@ -26,10 +26,11 @@ export default async function ExpiredPage({
 
   return (
     <main className="flex min-h-screen flex-col justify-between">
+      <NavMobile />
       <Nav />
       <div className="z-10 mx-2 my-10 flex max-w-md flex-col items-center space-y-5 px-2.5 text-center sm:mx-auto sm:max-w-lg sm:px-0 lg:mb-16">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-gray-300 bg-white/30">
-          <TimerOff className="h-6 w-6 text-gray-400" />
+        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-gray-300 bg-white/80">
+          <CircleHalfDottedClock className="size-6 text-gray-500" />
         </div>
         <h1 className="font-display text-5xl font-bold">Expired Link</h1>
         <p className="text-lg text-gray-600">
@@ -37,7 +38,7 @@ export default async function ExpiredPage({
           new one.
         </p>
         <a
-          href="https://dub.co"
+          href="https://dub.co/home"
           className="rounded-full bg-gray-800 px-10 py-2 font-medium text-white transition-colors hover:bg-black"
         >
           Create Your Free Branded Link
